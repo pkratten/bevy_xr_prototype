@@ -1,4 +1,4 @@
 pub mod body;
-pub mod hand_gestures;
+pub mod gestures_hands;
 pub mod hands;
 pub mod head;

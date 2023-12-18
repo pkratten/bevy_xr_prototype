@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-enum TrackedObject{
+enum TrackedObject {
+    Headset,
     LeftController,
     RightController,
     Other(usize),

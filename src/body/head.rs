@@ -5,5 +5,5 @@ struct Head;
 enum Eye {
     Left,
     Right,
-    Center, // In question, intended for 2D cam.
+    //Center, // In question, intended for 2D cam.
 }

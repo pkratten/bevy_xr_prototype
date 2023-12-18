@@ -18,6 +18,7 @@ enum ControllerInput {
 enum ControllerHand {
     Left,
     Right,
+    Other(usize),
 }
 
 enum InputState {
@@ -26,6 +27,7 @@ enum InputState {
     Pressed,
 }
 
+//Needs rework
 enum InputValue {
     None,
     Boolean(bool),
