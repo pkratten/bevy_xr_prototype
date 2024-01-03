@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use super::hands::Finger;
 
+#[derive(Event)]
 enum GestureHand {
     Open,
     Flat,
