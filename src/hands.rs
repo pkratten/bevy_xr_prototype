@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-pub use crate::XrLocal;
+use crate::space::XrOrigin;
+use crate::XrActive;
+use crate::XrLocal;
 
 #[derive(Component)]
 pub struct XrHand;

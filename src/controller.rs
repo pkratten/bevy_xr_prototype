@@ -1,35 +1,49 @@
 use bevy::prelude::*;
 
-pub use crate::XrLocal;
+use crate::space::XrOrigin;
+use crate::XrActive;
+use crate::XrLocal;
 
 pub use crate::handedness::XrHandedness;
 pub use crate::handedness::XrLeft;
 pub use crate::handedness::XrRight;
 
+/// The defining [`Component`] for entities that represent controllers.
+/// Represents the transform of a controller.
+///
+/// The hand of the controller is defined by the [`XrHandedness`] and either the [`XrLeft`] or [`XrRight`] components.
+///
+/// Controller entities should be parented to a [`XrOrigin`] entity and include a [`XrActive`].
+///
+/// This component should be spawned including a  [`SpatialBundle`] or similar.
 #[derive(Component)]
 pub struct XrController;
 
+/// This enum is entended for the bevy_input crate that still needs to be implemented below. The intention is to have an Controller_Input and an Controller_Touched variant to cover the information presented by most xr hardware.
+enum XrControllerInput {
+    A,
+    B,
+    X,
+    Y,
+    Stick,
+    Pad,
+    Trigger,
+    Grip,
+    Shoulder,
+    Option,
+    System,
+    Other(usize),
+}
+
 mod notes {
-    enum ControllerInput {
-        A,
-        B,
-        X,
-        Y,
-        Stick,
-        Pad,
-        Trigger,
-        Grip,
-        Shoulder,
-        Option,
-        System,
-        Other(usize),
-    }
+    // This enum is not going to find use as the bevy_input crate doesn't cover three state input.
 
     enum InputState {
         None,
         Touched,
         Pressed,
     }
+    /// This enum is covered by the button and axis options of the bevy_input crate.
 
     //Needs rework
     enum InputValue {
