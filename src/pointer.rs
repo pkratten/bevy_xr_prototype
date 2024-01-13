@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::XrActive;
-use crate::XrLocal;
+pub use crate::XrActive;
+pub use crate::XrLocal;
 
 pub use crate::handedness::XrHandedness;
 pub use crate::handedness::XrLeft;

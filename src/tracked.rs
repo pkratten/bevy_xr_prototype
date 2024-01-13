@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
-use crate::space::XrOrigin;
-use crate::XrActive;
-use crate::XrLocal;
+pub use crate::space::XrOrigin;
+pub use crate::XrActive;
+pub use crate::XrLocal;
 
 /// The defining [`Component`] for any tracked entities,
 /// Represents the transform of an object such as a headset, controller or puck.
 ///
 /// Tracked entities should be parented to a [`XrOrigin`] entity and include a [`XrActive`]..
 #[derive(Component)]
-enum XrTrackedObject {
+pub enum XrTrackedObject {
     Headset,
     LeftController,
     RightController,

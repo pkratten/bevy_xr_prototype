@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::space::XrOrigin;
-use crate::XrActive;
-use crate::XrLocal;
+pub use crate::space::XrOrigin;
+pub use crate::XrActive;
+pub use crate::XrLocal;
 
 /// The defining [`Component`] for head entities,
 /// Represents the bone transform of the head.

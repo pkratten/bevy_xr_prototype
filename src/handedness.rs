@@ -33,6 +33,24 @@ pub struct XrLeft;
 #[derive(Component)]
 pub struct XrRight;
 
+//
+// IntoEnum
+//
+
+use crate::IntoEnum;
+
+impl IntoEnum<XrHandedness> for XrLeft {
+    fn into_enum() -> XrHandedness {
+        XrHandedness::Left
+    }
+}
+
+impl IntoEnum<XrHandedness> for XrRight {
+    fn into_enum() -> XrHandedness {
+        XrHandedness::Right
+    }
+}
+
 mod notes {
     /// This component is debatable as I don't know if openxr or other runtimes supply this information.
     pub struct XrMainHand;

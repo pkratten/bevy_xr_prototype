@@ -3,6 +3,8 @@
 //! The notes modules are only intended as notes of possible features that might never be implemented, but are recorded to more meaningfully define the components that are implemented.
 //!
 //! TODO: Whats currently missing is the axis definition of hand joints. It should be either the openxr standard or a decision made from the different implementations such as unity, meta, windows mr, apple or ultraleap.
+//!
+//! TODO: Bundles for easy spawning.
 
 use bevy::prelude::*;
 
@@ -12,6 +14,7 @@ pub mod hands;
 pub mod head;
 pub mod pointer;
 pub mod space;
+pub mod systems;
 pub mod tracked;
 pub mod window;
 
@@ -49,3 +52,7 @@ pub struct XrLocal;
 /// TODO: This could be an enum specifing the state of the xr object.
 #[derive(Component)]
 pub struct XrActive(pub bool);
+
+pub trait IntoEnum<T> {
+    fn into_enum() -> T;
+}

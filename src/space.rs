@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::XrActive;
-use crate::XrLocal;
+pub use crate::XrActive;
+pub use crate::XrLocal;
 
 /// The defining [`Component`] for head entities,
 /// Represents the origin transform of the xr runtime and all tracked xr entities are relative to this transform.

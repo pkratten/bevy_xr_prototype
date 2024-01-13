@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::space::XrOrigin;
-use crate::XrActive;
-use crate::XrLocal;
+pub use crate::space::XrOrigin;
+pub use crate::XrActive;
+pub use crate::XrLocal;
 
 pub use crate::handedness::XrHandedness;
 pub use crate::handedness::XrLeft;
@@ -20,7 +20,7 @@ pub use crate::handedness::XrRight;
 pub struct XrController;
 
 /// This enum is entended for the bevy_input crate that still needs to be implemented below. The intention is to have an Controller_Input and an Controller_Touched variant to cover the information presented by most xr hardware.
-enum XrControllerInput {
+pub enum XrControllerInput {
     A,
     B,
     X,
