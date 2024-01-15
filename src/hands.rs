@@ -4,11 +4,12 @@ pub use crate::space::XrOrigin;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
+pub use crate::handedness::XrGenericHandedness;
 pub use crate::handedness::XrHandedness;
 pub use crate::handedness::XrLeft;
 pub use crate::handedness::XrRight;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub enum XrHand {
     Forearm,
     Wrist,
@@ -39,26 +40,34 @@ pub enum XrHand {
     LittleTip,
 }
 
-#[derive(Component)]
-pub struct XrHandJointRadius(pub f32);
+#[derive(Component, Reflect, Default)]
+pub struct XrHandJointRadius(pub Option<f32>);
 
-pub mod hand_part {
+pub mod hand_joint {
     use bevy::prelude::*;
 
-    #[derive(Component)]
+    use crate::IntoEnum;
+
+    use super::XrHand;
+
+    pub trait GenericHandJoint: Component + Reflect + IntoEnum<XrHand> + Default {}
+
+    #[derive(Component, Reflect, Default)]
     pub struct Forearm;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Wrist;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Palm;
 }
 
 pub mod finger {
     use bevy::prelude::*;
 
-    #[derive(Component)]
+    use crate::IntoEnum;
+
+    #[derive(Component, Reflect)]
     pub enum Finger {
         Thumb,
         Index,
@@ -67,30 +76,30 @@ pub mod finger {
         Little,
     }
 
-    pub trait FingerTrait {
-        fn finger() -> Finger;
-    }
+    pub trait GenericFinger: Component + Reflect + IntoEnum<Finger> + Default {}
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Thumb;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Index;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Middle;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Ring;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Little;
 }
 
 pub mod finger_joint {
     use bevy::prelude::*;
 
-    #[derive(Component)]
+    use crate::IntoEnum;
+
+    #[derive(Component, Reflect)]
     pub enum FingerJoint {
         Metacarpal,
         ProximalPhalanx,
@@ -99,34 +108,159 @@ pub mod finger_joint {
         Tip,
     }
 
+    pub trait GenericFingerJoint: Component + Reflect + IntoEnum<FingerJoint> + Default {}
+
     pub trait FingerJointTrait {
         fn finger_joint() -> FingerJoint;
     }
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Metacarpal;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct ProximalPhalanx;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct IntermediatePhalanx;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct DistalPhalanx;
 
-    #[derive(Component)]
+    #[derive(Component, Reflect, Default)]
     pub struct Tip;
 }
 
-//
-// IntoEnum
-//
+///
+/// Bundles
+///
 
-use crate::IntoEnum;
+#[derive(Bundle)]
+pub struct HandJointBundle<Handedness: XrGenericHandedness, HandJoint: GenericHandJoint> {
+    pub name: Name,
+    pub spatial_bundle: SpatialBundle,
+    pub xr_local: XrLocal,
+    pub xr_active: XrActive,
+    pub handedness: Handedness,
+    pub handedness_enum: XrHandedness,
+    pub hand_joint: HandJoint,
+    pub hand: XrHand,
+    pub hand_joint_radius: XrHandJointRadius,
+}
+
+impl<Handedness: XrGenericHandedness, HandJoint: GenericHandJoint> Default
+    for HandJointBundle<Handedness, HandJoint>
+{
+    fn default() -> Self {
+        let handedness = Handedness::default();
+        let hand_joint = HandJoint::default();
+        let name = "XrHand_".to_string()
+            + handedness.reflect_type_ident().unwrap()
+            + hand_joint.reflect_type_ident().unwrap();
+        HandJointBundle {
+            name: Name::new(name),
+            spatial_bundle: SpatialBundle::default(),
+            xr_local: XrLocal,
+            xr_active: XrActive(true),
+            handedness,
+            handedness_enum: Handedness::into_enum(),
+            hand_joint,
+            hand: HandJoint::into_enum(),
+            hand_joint_radius: XrHandJointRadius(None),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct FingerJointBundle<
+    Handedness: XrGenericHandedness,
+    Finger: GenericFinger,
+    Joint: GenericFingerJoint,
+> where
+    (Finger, Joint): IntoEnum<XrHand>,
+{
+    pub name: Name,
+    pub spatial_bundle: SpatialBundle,
+    pub xr_local: XrLocal,
+    pub xr_active: XrActive,
+    pub handedness: Handedness,
+    pub handedness_enum: XrHandedness,
+    pub finger: Finger,
+    pub finger_enum: finger::Finger,
+    pub joint: Joint,
+    pub joint_enum: FingerJoint,
+    pub hand: XrHand,
+    pub hand_joint_radius: XrHandJointRadius,
+}
+
+impl<Handedness: XrGenericHandedness, Finger: GenericFinger, Joint: GenericFingerJoint> Default
+    for FingerJointBundle<Handedness, Finger, Joint>
+where
+    (Finger, Joint): IntoEnum<XrHand>,
+{
+    fn default() -> Self {
+        let handedness = Handedness::default();
+        let finger = Finger::default();
+        let joint = Joint::default();
+        let name = "XrHand_".to_string()
+            + handedness.reflect_type_ident().unwrap()
+            + finger.reflect_type_ident().unwrap()
+            + joint.reflect_type_ident().unwrap();
+        FingerJointBundle {
+            name: Name::new(name),
+            spatial_bundle: SpatialBundle::default(),
+            xr_local: XrLocal,
+            xr_active: XrActive(true),
+            handedness,
+            handedness_enum: Handedness::into_enum(),
+            finger,
+            finger_enum: Finger::into_enum(),
+            joint,
+            joint_enum: Joint::into_enum(),
+            hand: <(Finger, Joint)>::into_enum(),
+            hand_joint_radius: XrHandJointRadius(None),
+        }
+    }
+}
+
 use finger::*;
 use finger_joint::*;
-use hand_part::*;
+use hand_joint::*;
+
+///
+/// GenericTraits
+///
+
+impl GenericHandJoint for Forearm {}
+
+impl GenericHandJoint for Wrist {}
+
+impl GenericHandJoint for Palm {}
+
+impl GenericFinger for Thumb {}
+
+impl GenericFinger for Index {}
+
+impl GenericFinger for Middle {}
+
+impl GenericFinger for Ring {}
+
+impl GenericFinger for Little {}
+
+impl GenericFingerJoint for Metacarpal {}
+
+impl GenericFingerJoint for ProximalPhalanx {}
+
+impl GenericFingerJoint for IntermediatePhalanx {}
+
+impl GenericFingerJoint for DistalPhalanx {}
+
+impl GenericFingerJoint for Tip {}
+
+///
+/// IntoEnum
+///
+///
+use crate::IntoEnum;
 
 // Hand
 
