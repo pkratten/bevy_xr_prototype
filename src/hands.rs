@@ -4,13 +4,13 @@ pub use crate::space::XrOrigin;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
-pub use crate::handedness::XrGenericHandedness;
-pub use crate::handedness::XrHandedness;
-pub use crate::handedness::XrLeft;
-pub use crate::handedness::XrRight;
+pub use crate::handedness::Handedness;
+pub use crate::handedness::HandednessMarker;
+pub use crate::handedness::LeftHanded;
+pub use crate::handedness::RightHanded;
 
 #[derive(Component, Reflect)]
-pub enum XrHand {
+pub enum Hand {
     Forearm,
     Wrist,
     Palm,
@@ -41,16 +41,20 @@ pub enum XrHand {
 }
 
 #[derive(Component, Reflect, Default)]
-pub struct XrHandJointRadius(pub Option<f32>);
+pub struct HandJointRadius(pub Option<f32>);
 
 pub mod hand_joint {
     use bevy::prelude::*;
 
     use crate::IntoEnum;
 
-    use super::XrHand;
+    use super::Hand;
 
-    pub trait GenericHandJoint: Component + Reflect + IntoEnum<XrHand> + Default {}
+    pub trait HandJointMarker: Component + Reflect + IntoEnum<Hand> + Default
+    where
+        Self: Sized,
+    {
+    }
 
     #[derive(Component, Reflect, Default)]
     pub struct Forearm;
@@ -76,7 +80,11 @@ pub mod finger {
         Little,
     }
 
-    pub trait GenericFinger: Component + Reflect + IntoEnum<Finger> + Default {}
+    pub trait FingerMarker: Component + Reflect + IntoEnum<Finger> + Default + Sized
+    where
+        Self: Sized,
+    {
+    }
 
     #[derive(Component, Reflect, Default)]
     pub struct Thumb;
@@ -108,10 +116,10 @@ pub mod finger_joint {
         Tip,
     }
 
-    pub trait GenericFingerJoint: Component + Reflect + IntoEnum<FingerJoint> + Default {}
-
-    pub trait FingerJointTrait {
-        fn finger_joint() -> FingerJoint;
+    pub trait FingerJointMarker: Component + Reflect + IntoEnum<FingerJoint> + Default
+    where
+        Self: Sized,
+    {
     }
 
     #[derive(Component, Reflect, Default)]
@@ -135,23 +143,23 @@ pub mod finger_joint {
 ///
 
 #[derive(Bundle)]
-pub struct HandJointBundle<Handedness: XrGenericHandedness, HandJoint: GenericHandJoint> {
+pub struct HandJointBundle<Handed: HandednessMarker, HandJoint: HandJointMarker> {
     pub name: Name,
     pub spatial_bundle: SpatialBundle,
     pub xr_local: XrLocal,
     pub xr_active: XrActive,
-    pub handedness: Handedness,
-    pub handedness_enum: XrHandedness,
+    pub handedness: Handed,
+    pub handedness_enum: Handedness,
     pub hand_joint: HandJoint,
-    pub hand: XrHand,
-    pub hand_joint_radius: XrHandJointRadius,
+    pub hand: Hand,
+    pub hand_joint_radius: HandJointRadius,
 }
 
-impl<Handedness: XrGenericHandedness, HandJoint: GenericHandJoint> Default
-    for HandJointBundle<Handedness, HandJoint>
+impl<Handed: HandednessMarker, HandJoint: HandJointMarker> Default
+    for HandJointBundle<Handed, HandJoint>
 {
     fn default() -> Self {
-        let handedness = Handedness::default();
+        let handedness = Handed::default();
         let hand_joint = HandJoint::default();
         let name = "XrHand_".to_string()
             + handedness.reflect_type_ident().unwrap()
@@ -162,43 +170,43 @@ impl<Handedness: XrGenericHandedness, HandJoint: GenericHandJoint> Default
             xr_local: XrLocal,
             xr_active: XrActive(true),
             handedness,
-            handedness_enum: Handedness::into_enum(),
+            handedness_enum: Handed::into_enum(),
             hand_joint,
             hand: HandJoint::into_enum(),
-            hand_joint_radius: XrHandJointRadius(None),
+            hand_joint_radius: HandJointRadius(None),
         }
     }
 }
 
 #[derive(Bundle)]
 pub struct FingerJointBundle<
-    Handedness: XrGenericHandedness,
-    Finger: GenericFinger,
-    Joint: GenericFingerJoint,
+    Handed: HandednessMarker,
+    Finger: FingerMarker,
+    Joint: FingerJointMarker,
 > where
-    (Finger, Joint): IntoEnum<XrHand>,
+    (Finger, Joint): IntoEnum<Hand>,
 {
     pub name: Name,
     pub spatial_bundle: SpatialBundle,
     pub xr_local: XrLocal,
     pub xr_active: XrActive,
-    pub handedness: Handedness,
-    pub handedness_enum: XrHandedness,
+    pub handedness: Handed,
+    pub handedness_enum: Handedness,
     pub finger: Finger,
     pub finger_enum: finger::Finger,
     pub joint: Joint,
     pub joint_enum: FingerJoint,
-    pub hand: XrHand,
-    pub hand_joint_radius: XrHandJointRadius,
+    pub hand: Hand,
+    pub hand_joint_radius: HandJointRadius,
 }
 
-impl<Handedness: XrGenericHandedness, Finger: GenericFinger, Joint: GenericFingerJoint> Default
-    for FingerJointBundle<Handedness, Finger, Joint>
+impl<Handed: HandednessMarker, Finger: FingerMarker, Joint: FingerJointMarker> Default
+    for FingerJointBundle<Handed, Finger, Joint>
 where
-    (Finger, Joint): IntoEnum<XrHand>,
+    (Finger, Joint): IntoEnum<Hand>,
 {
     fn default() -> Self {
-        let handedness = Handedness::default();
+        let handedness = Handed::default();
         let finger = Finger::default();
         let joint = Joint::default();
         let name = "XrHand_".to_string()
@@ -211,13 +219,13 @@ where
             xr_local: XrLocal,
             xr_active: XrActive(true),
             handedness,
-            handedness_enum: Handedness::into_enum(),
+            handedness_enum: Handed::into_enum(),
             finger,
             finger_enum: Finger::into_enum(),
             joint,
             joint_enum: Joint::into_enum(),
             hand: <(Finger, Joint)>::into_enum(),
-            hand_joint_radius: XrHandJointRadius(None),
+            hand_joint_radius: HandJointRadius(None),
         }
     }
 }
@@ -230,31 +238,31 @@ use hand_joint::*;
 /// GenericTraits
 ///
 
-impl GenericHandJoint for Forearm {}
+impl HandJointMarker for Forearm {}
 
-impl GenericHandJoint for Wrist {}
+impl HandJointMarker for Wrist {}
 
-impl GenericHandJoint for Palm {}
+impl HandJointMarker for Palm {}
 
-impl GenericFinger for Thumb {}
+impl FingerMarker for Thumb {}
 
-impl GenericFinger for Index {}
+impl FingerMarker for Index {}
 
-impl GenericFinger for Middle {}
+impl FingerMarker for Middle {}
 
-impl GenericFinger for Ring {}
+impl FingerMarker for Ring {}
 
-impl GenericFinger for Little {}
+impl FingerMarker for Little {}
 
-impl GenericFingerJoint for Metacarpal {}
+impl FingerJointMarker for Metacarpal {}
 
-impl GenericFingerJoint for ProximalPhalanx {}
+impl FingerJointMarker for ProximalPhalanx {}
 
-impl GenericFingerJoint for IntermediatePhalanx {}
+impl FingerJointMarker for IntermediatePhalanx {}
 
-impl GenericFingerJoint for DistalPhalanx {}
+impl FingerJointMarker for DistalPhalanx {}
 
-impl GenericFingerJoint for Tip {}
+impl FingerJointMarker for Tip {}
 
 ///
 /// IntoEnum
@@ -264,329 +272,329 @@ use crate::IntoEnum;
 
 // Hand
 
-impl IntoEnum<XrHand> for Forearm {
-    fn into_enum() -> XrHand {
-        XrHand::Forearm
+impl IntoEnum<Hand> for Forearm {
+    fn into_enum() -> Hand {
+        Hand::Forearm
     }
 }
 
-impl IntoEnum<XrHand> for Wrist {
-    fn into_enum() -> XrHand {
-        XrHand::Wrist
+impl IntoEnum<Hand> for Wrist {
+    fn into_enum() -> Hand {
+        Hand::Wrist
     }
 }
 
-impl IntoEnum<XrHand> for Palm {
-    fn into_enum() -> XrHand {
-        XrHand::Palm
+impl IntoEnum<Hand> for Palm {
+    fn into_enum() -> Hand {
+        Hand::Palm
     }
 }
 
 // Thumb
 
-impl IntoEnum<XrHand> for (Thumb, Metacarpal) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbMetacarpal
+impl IntoEnum<Hand> for (Thumb, Metacarpal) {
+    fn into_enum() -> Hand {
+        Hand::ThumbMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (Thumb, ProximalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbProximal
+impl IntoEnum<Hand> for (Thumb, ProximalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::ThumbProximal
     }
 }
 
-impl IntoEnum<XrHand> for (Thumb, DistalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbDistal
+impl IntoEnum<Hand> for (Thumb, DistalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::ThumbDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Thumb, Tip) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbTip
+impl IntoEnum<Hand> for (Thumb, Tip) {
+    fn into_enum() -> Hand {
+        Hand::ThumbTip
     }
 }
 
 // Index
 
-impl IntoEnum<XrHand> for (Index, Metacarpal) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexMetacarpal
+impl IntoEnum<Hand> for (Index, Metacarpal) {
+    fn into_enum() -> Hand {
+        Hand::IndexMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (Index, ProximalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexProximal
+impl IntoEnum<Hand> for (Index, ProximalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::IndexProximal
     }
 }
 
-impl IntoEnum<XrHand> for (Index, IntermediatePhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexIntermediate
+impl IntoEnum<Hand> for (Index, IntermediatePhalanx) {
+    fn into_enum() -> Hand {
+        Hand::IndexIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (Index, DistalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexDistal
+impl IntoEnum<Hand> for (Index, DistalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::IndexDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Index, Tip) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexTip
+impl IntoEnum<Hand> for (Index, Tip) {
+    fn into_enum() -> Hand {
+        Hand::IndexTip
     }
 }
 
 // Middle
 
-impl IntoEnum<XrHand> for (Middle, Metacarpal) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleMetacarpal
+impl IntoEnum<Hand> for (Middle, Metacarpal) {
+    fn into_enum() -> Hand {
+        Hand::MiddleMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (Middle, ProximalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleProximal
+impl IntoEnum<Hand> for (Middle, ProximalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::MiddleProximal
     }
 }
 
-impl IntoEnum<XrHand> for (Middle, IntermediatePhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleIntermediate
+impl IntoEnum<Hand> for (Middle, IntermediatePhalanx) {
+    fn into_enum() -> Hand {
+        Hand::MiddleIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (Middle, DistalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleDistal
+impl IntoEnum<Hand> for (Middle, DistalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::MiddleDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Middle, Tip) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleTip
+impl IntoEnum<Hand> for (Middle, Tip) {
+    fn into_enum() -> Hand {
+        Hand::MiddleTip
     }
 }
 
 // Ring
 
-impl IntoEnum<XrHand> for (Ring, Metacarpal) {
-    fn into_enum() -> XrHand {
-        XrHand::RingMetacarpal
+impl IntoEnum<Hand> for (Ring, Metacarpal) {
+    fn into_enum() -> Hand {
+        Hand::RingMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (Ring, ProximalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::RingProximal
+impl IntoEnum<Hand> for (Ring, ProximalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::RingProximal
     }
 }
 
-impl IntoEnum<XrHand> for (Ring, IntermediatePhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::RingIntermediate
+impl IntoEnum<Hand> for (Ring, IntermediatePhalanx) {
+    fn into_enum() -> Hand {
+        Hand::RingIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (Ring, DistalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::RingDistal
+impl IntoEnum<Hand> for (Ring, DistalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::RingDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Ring, Tip) {
-    fn into_enum() -> XrHand {
-        XrHand::RingTip
+impl IntoEnum<Hand> for (Ring, Tip) {
+    fn into_enum() -> Hand {
+        Hand::RingTip
     }
 }
 
 // Little
 
-impl IntoEnum<XrHand> for (Little, Metacarpal) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleMetacarpal
+impl IntoEnum<Hand> for (Little, Metacarpal) {
+    fn into_enum() -> Hand {
+        Hand::LittleMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (Little, ProximalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleProximal
+impl IntoEnum<Hand> for (Little, ProximalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::LittleProximal
     }
 }
 
-impl IntoEnum<XrHand> for (Little, IntermediatePhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleIntermediate
+impl IntoEnum<Hand> for (Little, IntermediatePhalanx) {
+    fn into_enum() -> Hand {
+        Hand::LittleIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (Little, DistalPhalanx) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleDistal
+impl IntoEnum<Hand> for (Little, DistalPhalanx) {
+    fn into_enum() -> Hand {
+        Hand::LittleDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Little, Tip) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleTip
+impl IntoEnum<Hand> for (Little, Tip) {
+    fn into_enum() -> Hand {
+        Hand::LittleTip
     }
 }
 
 // Thumb swapped
 
-impl IntoEnum<XrHand> for (Metacarpal, Thumb) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbMetacarpal
+impl IntoEnum<Hand> for (Metacarpal, Thumb) {
+    fn into_enum() -> Hand {
+        Hand::ThumbMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (ProximalPhalanx, Thumb) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbProximal
+impl IntoEnum<Hand> for (ProximalPhalanx, Thumb) {
+    fn into_enum() -> Hand {
+        Hand::ThumbProximal
     }
 }
 
-impl IntoEnum<XrHand> for (DistalPhalanx, Thumb) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbDistal
+impl IntoEnum<Hand> for (DistalPhalanx, Thumb) {
+    fn into_enum() -> Hand {
+        Hand::ThumbDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Tip, Thumb) {
-    fn into_enum() -> XrHand {
-        XrHand::ThumbTip
+impl IntoEnum<Hand> for (Tip, Thumb) {
+    fn into_enum() -> Hand {
+        Hand::ThumbTip
     }
 }
 
 // Index swapped
 
-impl IntoEnum<XrHand> for (Metacarpal, Index) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexMetacarpal
+impl IntoEnum<Hand> for (Metacarpal, Index) {
+    fn into_enum() -> Hand {
+        Hand::IndexMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (ProximalPhalanx, Index) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexProximal
+impl IntoEnum<Hand> for (ProximalPhalanx, Index) {
+    fn into_enum() -> Hand {
+        Hand::IndexProximal
     }
 }
 
-impl IntoEnum<XrHand> for (IntermediatePhalanx, Index) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexIntermediate
+impl IntoEnum<Hand> for (IntermediatePhalanx, Index) {
+    fn into_enum() -> Hand {
+        Hand::IndexIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (DistalPhalanx, Index) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexDistal
+impl IntoEnum<Hand> for (DistalPhalanx, Index) {
+    fn into_enum() -> Hand {
+        Hand::IndexDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Tip, Index) {
-    fn into_enum() -> XrHand {
-        XrHand::IndexTip
+impl IntoEnum<Hand> for (Tip, Index) {
+    fn into_enum() -> Hand {
+        Hand::IndexTip
     }
 }
 
 // Middle swapped
 
-impl IntoEnum<XrHand> for (Metacarpal, Middle) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleMetacarpal
+impl IntoEnum<Hand> for (Metacarpal, Middle) {
+    fn into_enum() -> Hand {
+        Hand::MiddleMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (ProximalPhalanx, Middle) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleProximal
+impl IntoEnum<Hand> for (ProximalPhalanx, Middle) {
+    fn into_enum() -> Hand {
+        Hand::MiddleProximal
     }
 }
 
-impl IntoEnum<XrHand> for (IntermediatePhalanx, Middle) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleIntermediate
+impl IntoEnum<Hand> for (IntermediatePhalanx, Middle) {
+    fn into_enum() -> Hand {
+        Hand::MiddleIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (DistalPhalanx, Middle) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleDistal
+impl IntoEnum<Hand> for (DistalPhalanx, Middle) {
+    fn into_enum() -> Hand {
+        Hand::MiddleDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Tip, Middle) {
-    fn into_enum() -> XrHand {
-        XrHand::MiddleTip
+impl IntoEnum<Hand> for (Tip, Middle) {
+    fn into_enum() -> Hand {
+        Hand::MiddleTip
     }
 }
 
 // Ring swapped
 
-impl IntoEnum<XrHand> for (Metacarpal, Ring) {
-    fn into_enum() -> XrHand {
-        XrHand::RingMetacarpal
+impl IntoEnum<Hand> for (Metacarpal, Ring) {
+    fn into_enum() -> Hand {
+        Hand::RingMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (ProximalPhalanx, Ring) {
-    fn into_enum() -> XrHand {
-        XrHand::RingProximal
+impl IntoEnum<Hand> for (ProximalPhalanx, Ring) {
+    fn into_enum() -> Hand {
+        Hand::RingProximal
     }
 }
 
-impl IntoEnum<XrHand> for (IntermediatePhalanx, Ring) {
-    fn into_enum() -> XrHand {
-        XrHand::RingIntermediate
+impl IntoEnum<Hand> for (IntermediatePhalanx, Ring) {
+    fn into_enum() -> Hand {
+        Hand::RingIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (DistalPhalanx, Ring) {
-    fn into_enum() -> XrHand {
-        XrHand::RingDistal
+impl IntoEnum<Hand> for (DistalPhalanx, Ring) {
+    fn into_enum() -> Hand {
+        Hand::RingDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Tip, Ring) {
-    fn into_enum() -> XrHand {
-        XrHand::RingTip
+impl IntoEnum<Hand> for (Tip, Ring) {
+    fn into_enum() -> Hand {
+        Hand::RingTip
     }
 }
 
 // Little swapped
 
-impl IntoEnum<XrHand> for (Metacarpal, Little) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleMetacarpal
+impl IntoEnum<Hand> for (Metacarpal, Little) {
+    fn into_enum() -> Hand {
+        Hand::LittleMetacarpal
     }
 }
 
-impl IntoEnum<XrHand> for (ProximalPhalanx, Little) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleProximal
+impl IntoEnum<Hand> for (ProximalPhalanx, Little) {
+    fn into_enum() -> Hand {
+        Hand::LittleProximal
     }
 }
 
-impl IntoEnum<XrHand> for (IntermediatePhalanx, Little) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleIntermediate
+impl IntoEnum<Hand> for (IntermediatePhalanx, Little) {
+    fn into_enum() -> Hand {
+        Hand::LittleIntermediate
     }
 }
 
-impl IntoEnum<XrHand> for (DistalPhalanx, Little) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleDistal
+impl IntoEnum<Hand> for (DistalPhalanx, Little) {
+    fn into_enum() -> Hand {
+        Hand::LittleDistal
     }
 }
 
-impl IntoEnum<XrHand> for (Tip, Little) {
-    fn into_enum() -> XrHand {
-        XrHand::LittleTip
+impl IntoEnum<Hand> for (Tip, Little) {
+    fn into_enum() -> Hand {
+        Hand::LittleTip
     }
 }
 

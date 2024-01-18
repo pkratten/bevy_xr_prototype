@@ -3,9 +3,9 @@ use bevy::prelude::*;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
-pub use crate::handedness::XrHandedness;
-pub use crate::handedness::XrLeft;
-pub use crate::handedness::XrRight;
+pub use crate::handedness::Handedness;
+pub use crate::handedness::LeftHanded;
+pub use crate::handedness::RightHanded;
 
 /// The defining [`Component`] for pointer entities,
 /// Represents the transform for a variety of pointers that can be used for raycasting. Pointing at things in xr has become so universal that it should be covered in this crate. Which pointer to interact with should be decided at runtime and depending on pointer availability and interaction. A good example is the hololens and the mixed reality toolkit.

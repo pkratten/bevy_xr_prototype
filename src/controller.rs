@@ -4,9 +4,9 @@ pub use crate::space::XrOrigin;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
-pub use crate::handedness::XrHandedness;
-pub use crate::handedness::XrLeft;
-pub use crate::handedness::XrRight;
+pub use crate::handedness::Handedness;
+pub use crate::handedness::LeftHanded;
+pub use crate::handedness::RightHanded;
 
 /// The defining [`Component`] for entities that represent controllers.
 /// Represents the transform of a controller.

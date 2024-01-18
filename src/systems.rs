@@ -1,65 +1,72 @@
-use bevy::prelude::*;
+use bevy::{ecs::query::QuerySingleError, prelude::*};
 
 use crate::{
-    handedness::XrGenericHandedness,
+    handedness::HandednessMarker,
     hands::{
         finger::*,
-        finger_joint::{FingerJoint, GenericFingerJoint, Metacarpal, ProximalPhalanx},
+        finger_joint::{FingerJointMarker, Metacarpal, ProximalPhalanx},
         hand_joint::{Palm, Wrist},
-        HandJointBundle, XrHand, XrHandJointRadius,
+        Hand, HandJointBundle, HandJointRadius,
     },
     IntoEnum, XrActive, XrLocal,
 };
 
 pub fn draw_hand_gizmos(
-    joint: Query<(&GlobalTransform, Option<&XrHandJointRadius>), With<XrHand>>,
+    joint: Query<(&GlobalTransform, Option<&HandJointRadius>), With<Hand>>,
     mut gizmos: Gizmos,
 ) {
     for (transform, radius) in joint.iter() {
         let radius = {
-            if let Some(XrHandJointRadius(Some(radius))) = radius {
+            if let Some(HandJointRadius(Some(radius))) = radius {
                 *radius
             } else {
-                0.007
+                0.0055
             }
         };
-        gizmos.circle(
-            transform.translation(),
-            transform.up(),
-            radius,
-            Color::WHITE,
-        );
+
+        let (scale, _rotation, translation) = transform.to_scale_rotation_translation();
+
+        let radius = radius * scale.length();
+
+        gizmos.circle(translation, transform.forward(), radius, Color::WHITE);
         gizmos.line(
-            transform.translation(),
-            transform.translation() + transform.forward() * radius,
+            translation,
+            translation + transform.forward() * radius,
             Color::BLUE,
         );
         gizmos.line(
-            transform.translation(),
-            transform.translation() + transform.right() * radius,
+            translation,
+            translation + transform.right() * radius,
             Color::RED,
         );
         gizmos.line(
-            transform.translation(),
-            transform.translation() + transform.up() * radius,
+            translation,
+            translation + transform.up() * radius,
             Color::GREEN,
         );
     }
 }
 
-pub fn substitute_local_palm<Handedness: XrGenericHandedness>(
+/// TODO: Make rotation average of Metacarpals. Tweak position by filtering the joints further.
+pub fn substitute_local_palm<Handedness: HandednessMarker>(
     wrist: Query<
         (Entity, &GlobalTransform, &XrActive),
-        (With<XrLocal>, With<Handedness>, With<Wrist>),
+        (With<XrLocal>, With<Handedness>, With<Wrist>, Without<Palm>),
     >,
-    mut palm: Query<(&mut Transform, &mut XrActive), (With<XrLocal>, With<Handedness>, With<Palm>)>,
+    mut palm: Query<
+        (Entity, &mut Transform, &mut XrActive),
+        (With<XrLocal>, With<Handedness>, With<Palm>, Without<Wrist>),
+    >,
     joints: Query<
         (&GlobalTransform, &XrActive),
         (
             With<XrLocal>,
             With<Handedness>,
             Without<Thumb>,
+            Without<Little>,
             Or<(With<Metacarpal>, With<ProximalPhalanx>)>,
+            Without<Wrist>,
+            Without<Palm>,
         ),
     >,
     mut commands: Commands,
@@ -83,35 +90,46 @@ pub fn substitute_local_palm<Handedness: XrGenericHandedness>(
 
             // Update or spawn palm entity.
 
-            if let Ok((mut transform, mut active)) = palm.get_single_mut() {
-                transform.translation = translation;
-                transform.rotation = rotation;
-                active.0 = true;
-            } else {
-                let entity = commands
-                    .spawn(HandJointBundle::<Handedness, Palm> {
-                        spatial_bundle: SpatialBundle {
-                            transform: Transform::from_translation(translation)
-                                .with_rotation(rotation),
+            match palm.get_single_mut() {
+                Ok((_, mut transform, mut active)) => {
+                    transform.translation = translation;
+                    transform.rotation = rotation;
+                    active.0 = true;
+                }
+                Err(QuerySingleError::MultipleEntities(_)) => {
+                    let mut palms = palm.iter();
+                    palms.next();
+                    for (entity, _, _) in palms {
+                        commands.entity(entity).despawn();
+                    }
+                }
+                Err(QuerySingleError::NoEntities(_)) => {
+                    let entity = commands
+                        .spawn(HandJointBundle::<Handedness, Palm> {
+                            spatial_bundle: SpatialBundle {
+                                transform: Transform::from_translation(translation)
+                                    .with_rotation(rotation),
+                                ..default()
+                            },
                             ..default()
-                        },
-                        ..default()
-                    })
-                    .id();
-                commands.entity(wrist).add_child(entity);
+                        })
+                        .id();
+                    // TODO: Debatable
+                    commands.entity(wrist).add_child(entity);
+                }
             }
         }
     }
 
-    for (_, mut active) in palm.iter_mut() {
+    for (_, _, mut active) in palm.iter_mut() {
         active.0 = false;
     }
 }
 
 //example
-fn test<Finger: GenericFinger, Joint: GenericFingerJoint>()
+fn test<Finger: FingerMarker, Joint: FingerJointMarker>()
 where
-    (Finger, Joint): IntoEnum<XrHand>,
+    (Finger, Joint): IntoEnum<Hand>,
 {
     let test = <(Finger, Joint)>::into_enum();
 }

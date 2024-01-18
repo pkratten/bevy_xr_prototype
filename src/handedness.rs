@@ -2,8 +2,6 @@ use bevy::prelude::*;
 
 use crate::IntoEnum;
 
-pub trait XrGenericHandedness: Component + Reflect + IntoEnum<XrHandedness> + Default {}
-
 /// The defining [`Component`] for entities that belong to one side of the body.
 /// Represents the left or right hand side.
 ///
@@ -13,10 +11,15 @@ pub trait XrGenericHandedness: Component + Reflect + IntoEnum<XrHandedness> + De
 ///
 /// This component should be spawned with entities that belong to one side of the body.
 #[derive(Component)]
-pub enum XrHandedness {
+pub enum Handedness {
     Right,
     Left,
-    Other(usize),
+}
+
+pub trait HandednessMarker: Component + Reflect + IntoEnum<Handedness> + Default + Sized
+where
+    Self: Sized,
+{
 }
 
 /// The defining [`Component`] for entities that belong to left side of the body.
@@ -26,7 +29,7 @@ pub enum XrHandedness {
 ///
 /// This component should be spawned with entities that belong to the left side of the body.
 #[derive(Component, Reflect, Default)]
-pub struct XrLeft;
+pub struct LeftHanded;
 
 /// The defining [`Component`] for entities that belong to right side of the body.
 /// Represents the right hand side.
@@ -35,25 +38,25 @@ pub struct XrLeft;
 ///
 /// This component should be spawned with entities that belong to the right side of the body.
 #[derive(Component, Reflect, Default)]
-pub struct XrRight;
+pub struct RightHanded;
 
 //
 // Traits
 //
 
-impl XrGenericHandedness for XrLeft {}
+impl HandednessMarker for LeftHanded {}
 
-impl XrGenericHandedness for XrRight {}
+impl HandednessMarker for RightHanded {}
 
-impl IntoEnum<XrHandedness> for XrLeft {
-    fn into_enum() -> XrHandedness {
-        XrHandedness::Left
+impl IntoEnum<Handedness> for LeftHanded {
+    fn into_enum() -> Handedness {
+        Handedness::Left
     }
 }
 
-impl IntoEnum<XrHandedness> for XrRight {
-    fn into_enum() -> XrHandedness {
-        XrHandedness::Right
+impl IntoEnum<Handedness> for RightHanded {
+    fn into_enum() -> Handedness {
+        Handedness::Right
     }
 }
 
