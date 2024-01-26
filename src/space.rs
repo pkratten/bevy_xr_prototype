@@ -21,6 +21,27 @@ pub enum XrOrigin {
     Other,
 }
 
+#[derive(Bundle)]
+pub struct XrOriginBundle {
+    name: Name,
+    spatial_bundle: SpatialBundle,
+    xr_origin: XrOrigin,
+    xr_local: XrLocal,
+    xr_active: XrActive,
+}
+
+impl XrOriginBundle {
+    pub fn default(origin_type: XrOrigin) -> XrOriginBundle {
+        XrOriginBundle {
+            name: Name::new("XrOrigin"),
+            spatial_bundle: SpatialBundle::default(),
+            xr_origin: origin_type,
+            xr_local: XrLocal,
+            xr_active: XrActive(true),
+        }
+    }
+}
+
 mod notes {
     /// Is there other information obtainable of the space a xr session is taking place in?
     pub struct XrSpace;

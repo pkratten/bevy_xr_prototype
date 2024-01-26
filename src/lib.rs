@@ -9,6 +9,7 @@
 use bevy::prelude::*;
 
 pub mod controller;
+pub mod controller_input;
 pub mod handedness;
 pub mod hands;
 pub mod head;
@@ -53,15 +54,13 @@ pub struct XrLocal;
 #[derive(Component)]
 pub struct XrActive(pub bool);
 
-use head::XrEye;
-use window::XrWindow;
 /// The defining [`Component`] which indicates that the entity is a xr managed view.
 ///
 /// This component should be spawned with every entity that is managed by the xr platform and has a camera that renders a tracked view such as an [`XrEye`] or an [`XrWindow`].
 ///
 /// The index of the view should be recorded in this component.
 #[derive(Component)]
-pub struct XrView(pub usize);
+pub struct XrView(pub u8);
 
 pub trait IntoEnum<T> {
     fn into_enum() -> T;

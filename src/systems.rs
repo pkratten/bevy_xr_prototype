@@ -4,11 +4,11 @@ use crate::{
     handedness::HandednessMarker,
     hands::{
         finger::*,
-        finger_joint::{FingerJointMarker, Metacarpal, ProximalPhalanx},
+        finger_joint::{Metacarpal, ProximalPhalanx},
         hand_joint::{Palm, Wrist},
         Hand, HandJointBundle, HandJointRadius,
     },
-    IntoEnum, XrActive, XrLocal,
+    XrActive, XrLocal,
 };
 
 pub fn draw_hand_gizmos(
@@ -124,12 +124,4 @@ pub fn substitute_local_palm<Handedness: HandednessMarker>(
     for (_, _, mut active) in palm.iter_mut() {
         active.0 = false;
     }
-}
-
-//example
-fn test<Finger: FingerMarker, Joint: FingerJointMarker>()
-where
-    (Finger, Joint): IntoEnum<Hand>,
-{
-    let test = <(Finger, Joint)>::into_enum();
 }

@@ -8,13 +8,9 @@ pub use crate::XrLocal;
 /// Represents the transform of an object such as a headset, controller or puck.
 ///
 /// Tracked entities should be parented to a [`XrOrigin`] entity and include a [`XrActive`]..
-#[derive(Component)]
-pub enum XrTrackedObject {
-    Headset,
-    LeftController,
-    RightController,
-    Other(usize),
-}
+#[derive(Component, Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Debug, Hash, PartialEq)]
+pub struct XrTrackedObject(pub u8);
 
 /// Ideas to support other things in the future that could be seperate from XrTrackedObject.
 mod notes {

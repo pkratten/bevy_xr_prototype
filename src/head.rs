@@ -37,4 +37,4 @@ pub use crate::handedness::RightHanded;
 ///
 /// This component should be spawned including a  [`Camera3dBundle`] or similar and should be marked by a [`XrHandedness`] and one of the [`XrLeft`] or [`XrRight`] components.
 #[derive(Component)]
-pub struct XrEye(pub usize);
+pub struct XrEye(pub u8);
