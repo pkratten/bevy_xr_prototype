@@ -14,6 +14,7 @@ pub mod handedness;
 pub mod hands;
 pub mod head;
 pub mod pointer;
+pub mod post_process_flip_y;
 pub mod space;
 pub mod systems;
 pub mod tracked;
