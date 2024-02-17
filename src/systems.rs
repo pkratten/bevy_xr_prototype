@@ -49,13 +49,14 @@ pub fn draw_hand_gizmos(
 
 /// TODO: Make rotation average of Metacarpals. Tweak position by filtering the joints further.
 pub fn substitute_local_palm<Handedness: HandednessMarker>(
+    mut palm: Query<
+        (Entity, &mut Transform, &mut XrActive),
+        (With<XrLocal>, With<Handedness>, With<Palm>),
+    >,
+
     wrist: Query<
         (Entity, &GlobalTransform, &XrActive),
         (With<XrLocal>, With<Handedness>, With<Wrist>, Without<Palm>),
-    >,
-    mut palm: Query<
-        (Entity, &mut Transform, &mut XrActive),
-        (With<XrLocal>, With<Handedness>, With<Palm>, Without<Wrist>),
     >,
     joints: Query<
         (&GlobalTransform, &XrActive),
@@ -65,10 +66,10 @@ pub fn substitute_local_palm<Handedness: HandednessMarker>(
             Without<Thumb>,
             Without<Little>,
             Or<(With<Metacarpal>, With<ProximalPhalanx>)>,
-            Without<Wrist>,
             Without<Palm>,
         ),
     >,
+
     mut commands: Commands,
 ) {
     if let Ok((wrist, wrist_transform, wrist_active)) = wrist.get_single() {

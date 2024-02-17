@@ -9,9 +9,9 @@ pub use crate::handedness::Handedness;
 pub use crate::handedness::LeftHanded;
 pub use crate::handedness::RightHanded;
 
-pub use crate::tracked::XrTrackedObject;
-
 use crate::handedness::HandednessMarker;
+
+pub use crate::tracked::XrTrackedObject;
 
 /// The defining [`Component`] for entities that represent controllers.
 /// Represents the transform of a controller.

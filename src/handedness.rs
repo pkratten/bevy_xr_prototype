@@ -60,6 +60,7 @@ impl IntoEnum<Handedness> for RightHanded {
     }
 }
 
+#[cfg(notes)]
 mod notes {
     /// This component is debatable as I don't know if openxr or other runtimes supply this information.
     pub struct XrMainHand;

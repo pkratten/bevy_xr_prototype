@@ -42,6 +42,7 @@ impl XrOriginBundle {
     }
 }
 
+#[cfg(notes)]
 mod notes {
     /// Is there other information obtainable of the space a xr session is taking place in?
     pub struct XrSpace;

@@ -14,7 +14,7 @@ use bevy::reflect::Reflect;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 #[reflect(Debug, Hash, PartialEq)]
 pub enum XrControllerInputType {
-    A,
+    A, // would AorX and BorY be better?
     B,
     X,
     Y,

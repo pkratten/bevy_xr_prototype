@@ -26,6 +26,7 @@ pub enum XrPointer {
 }
 
 /// Still need to figure out how to implement the interaction. Either as an event or as an input.
+#[cfg(notes)]
 mod notes {
     use bevy::prelude::*;
     #[derive(Event)]

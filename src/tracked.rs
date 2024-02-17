@@ -12,7 +12,29 @@ pub use crate::XrLocal;
 #[reflect(Debug, Hash, PartialEq)]
 pub struct XrTrackedObject(pub u8);
 
+#[derive(Bundle)]
+pub struct XrTrackedObjectBundle {
+    name: Name,
+    spatial_bundle: SpatialBundle,
+    xr_local: XrLocal,
+    xr_active: XrActive,
+    xr_tracked_object: XrTrackedObject,
+}
+
+impl XrTrackedObjectBundle {
+    pub fn default(index: u8) -> XrTrackedObjectBundle {
+        XrTrackedObjectBundle {
+            name: Name::new("XrTrackedObject_".to_string() + &index.to_string()),
+            spatial_bundle: SpatialBundle::default(),
+            xr_local: XrLocal,
+            xr_active: XrActive(true),
+            xr_tracked_object: XrTrackedObject(index),
+        }
+    }
+}
+
 /// Ideas to support other things in the future that could be seperate from XrTrackedObject.
+#[cfg(notes)]
 mod notes {
     /// Vuforia?
     struct XrTrackedMesh;
