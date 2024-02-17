@@ -6,13 +6,12 @@
 //! This is a fairly low level example and assumes some familiarity with rendering concepts and wgpu.
 
 use bevy::{
+    asset::load_internal_asset,
     core_pipeline::{core_3d, fullscreen_vertex_shader::fullscreen_shader_vertex_state},
     ecs::query::QueryItem,
     prelude::*,
     render::{
-        extract_component::{
-            ComponentUniforms, ExtractComponent, ExtractComponentPlugin, UniformComponentPlugin,
-        },
+        extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_graph::{
             NodeRunError, RenderGraphApp, RenderGraphContext, ViewNode, ViewNodeRunner,
         },
@@ -21,7 +20,7 @@ use bevy::{
             BindingType, CachedRenderPipelineId, ColorTargetState, ColorWrites, FragmentState,
             MultisampleState, Operations, PipelineCache, PrimitiveState, RenderPassColorAttachment,
             RenderPassDescriptor, RenderPipelineDescriptor, Sampler, SamplerBindingType,
-            SamplerDescriptor, ShaderStages, ShaderType, TextureFormat, TextureSampleType,
+            SamplerDescriptor, ShaderStages, TextureFormat, TextureSampleType,
             TextureViewDimension,
         },
         renderer::{RenderContext, RenderDevice},
@@ -38,8 +37,17 @@ pub struct PostProcessFlipYPlugin;
 #[derive(Component, Default, Clone, Copy, ExtractComponent)]
 pub struct PostProcessFlipY;
 
+const POST_PROCESS_FLIP_Y_HANDLE: Handle<Shader> = Handle::weak_from_u128(9837534426033940724);
+
 impl Plugin for PostProcessFlipYPlugin {
     fn build(&self, app: &mut App) {
+        load_internal_asset!(
+            app,
+            POST_PROCESS_FLIP_Y_HANDLE,
+            "post_processing_flip_y.wgsl",
+            Shader::from_wgsl
+        );
+
         app.add_plugins((
             // The settings will be a component that lives in the main world but will
             // be extracted to the render world every frame.
@@ -103,7 +111,7 @@ impl Plugin for PostProcessFlipYPlugin {
 #[derive(Default)]
 struct PostProcessFlipYNode;
 impl PostProcessFlipYNode {
-    pub const NAME: &'static str = "post_process";
+    pub const NAME: &'static str = "post_process_flip_y";
 }
 
 // The ViewNode trait is required by the ViewNodeRunner
@@ -112,7 +120,7 @@ impl ViewNode for PostProcessFlipYNode {
     // but it's not a normal system so we need to define it manually.
     //
     // This query will only run on the view entity
-    type ViewQuery = &'static ViewTarget;
+    type ViewQuery = (&'static ViewTarget, &'static PostProcessFlipY);
 
     // Runs the node logic
     // This is where you encode draw commands.
@@ -125,7 +133,7 @@ impl ViewNode for PostProcessFlipYNode {
         &self,
         _graph: &mut RenderGraphContext,
         render_context: &mut RenderContext,
-        view_target: QueryItem<Self::ViewQuery>,
+        (view_target, _post_process): QueryItem<Self::ViewQuery>,
         world: &World,
     ) -> Result<(), NodeRunError> {
         // Get the pipeline resource that contains the global data we need
@@ -232,12 +240,14 @@ impl FromWorld for PostProcessFlipYPipeline {
         });
 
         // We can create the sampler here since it won't change at runtime and doesn't depend on the view
-        let sampler = render_device.create_sampler(&SamplerDescriptor::default());
+        let sampler = render_device.create_sampler(&SamplerDescriptor {
+            address_mode_u: bevy::render::render_resource::AddressMode::Repeat,
+            address_mode_v: bevy::render::render_resource::AddressMode::Repeat,
+            ..default()
+        });
 
         // Get the shader handle
-        let shader = world
-            .resource::<AssetServer>()
-            .load("post_processing_flip_y.wgsl");
+        let shader = POST_PROCESS_FLIP_Y_HANDLE;
 
         let pipeline_id = world
             .resource_mut::<PipelineCache>()
