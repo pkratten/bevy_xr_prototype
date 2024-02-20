@@ -4,10 +4,7 @@ pub use crate::space::XrOrigin;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
-pub use crate::handedness::Handedness;
-pub use crate::handedness::HandednessMarker;
-pub use crate::handedness::LeftHanded;
-pub use crate::handedness::RightHanded;
+pub use crate::handedness::*;
 
 #[derive(Component, Reflect)]
 pub enum Hand {
@@ -164,7 +161,7 @@ impl<Handed: HandednessMarker, HandJoint: HandJointMarker> Default
         let name = "XrHand_".to_string()
             + handedness.reflect_type_ident().unwrap()
             + hand_joint.reflect_type_ident().unwrap();
-        HandJointBundle {
+        Self {
             name: Name::new(name),
             spatial_bundle: SpatialBundle::default(),
             xr_local: XrLocal,
@@ -213,7 +210,7 @@ where
             + handedness.reflect_type_ident().unwrap()
             + finger.reflect_type_ident().unwrap()
             + joint.reflect_type_ident().unwrap();
-        FingerJointBundle {
+        Self {
             name: Name::new(name),
             spatial_bundle: SpatialBundle::default(),
             xr_local: XrLocal,

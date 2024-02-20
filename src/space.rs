@@ -31,8 +31,8 @@ pub struct XrOriginBundle {
 }
 
 impl XrOriginBundle {
-    pub fn default(origin_type: XrOrigin) -> XrOriginBundle {
-        XrOriginBundle {
+    pub fn default(origin_type: XrOrigin) -> Self {
+        Self {
             name: Name::new("XrOrigin"),
             spatial_bundle: SpatialBundle::default(),
             xr_origin: origin_type,

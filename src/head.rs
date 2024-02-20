@@ -35,8 +35,8 @@ pub struct XrHeadsetBundle {
 }
 
 impl XrHeadsetBundle {
-    pub fn default() -> XrHeadsetBundle {
-        XrHeadsetBundle {
+    pub fn default() -> Self {
+        Self {
             name: Name::new("XrOrigin"),
             spatial_bundle: SpatialBundle::default(),
             xr_headset: XrHeadset,
@@ -76,13 +76,13 @@ pub struct XrEyeBundle<Handed: HandednessMarker> {
 }
 
 impl<Handed: HandednessMarker> XrEyeBundle<Handed> {
-    pub fn default(index: u8) -> XrEyeBundle<Handed> {
+    pub fn default(index: u8) -> Self {
         let handedness = Handed::default();
         let name = "XrEye_".to_string()
             + handedness.reflect_type_ident().unwrap()
             + "_"
             + &index.to_string();
-        XrEyeBundle {
+        Self {
             name: Name::new(name),
             camera_bundle: Camera3dBundle::default(),
             xr_local: XrLocal,

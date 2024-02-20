@@ -5,11 +5,7 @@ use crate::IntoEnum;
 pub use crate::XrActive;
 pub use crate::XrLocal;
 
-pub use crate::handedness::Handedness;
-pub use crate::handedness::LeftHanded;
-pub use crate::handedness::RightHanded;
-
-use crate::handedness::HandednessMarker;
+pub use crate::handedness::*;
 
 pub use crate::tracked::XrTrackedObject;
 
@@ -45,7 +41,7 @@ impl<Handed: HandednessMarker + IntoEnum<XrController>> XrControllerBundle<Hande
     pub fn default(index: u8) -> Self {
         let handedness = Handed::default();
         let name = "XrController_".to_string() + handedness.reflect_type_ident().unwrap();
-        XrControllerBundle {
+        Self {
             name: Name::new(name),
             spatial_bundle: SpatialBundle::default(),
             xr_local: XrLocal,
@@ -69,8 +65,8 @@ pub struct XrControllerHandlessBundle {
 }
 
 impl XrControllerHandlessBundle {
-    pub fn default(index: u8) -> XrControllerHandlessBundle {
-        XrControllerHandlessBundle {
+    pub fn default(index: u8) -> Self {
+        Self {
             name: Name::new("XrController_Other(".to_string() + &index.to_string() + ")"),
             spatial_bundle: SpatialBundle::default(),
             xr_local: XrLocal,

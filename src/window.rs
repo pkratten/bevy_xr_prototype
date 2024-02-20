@@ -23,8 +23,8 @@ pub struct XrWindowBundle {
 }
 
 impl XrWindowBundle {
-    pub fn default(index: u8) -> XrWindowBundle {
-        XrWindowBundle {
+    pub fn default(index: u8) -> Self {
+        Self {
             name: Name::new("XrWindow_".to_string() + &index.to_string()),
             camera_bundle: Camera3dBundle::default(),
             xr_local: XrLocal,

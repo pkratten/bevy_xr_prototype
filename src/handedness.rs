@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::IntoEnum;
+pub use crate::IntoEnum;
 
 /// The defining [`Component`] for entities that belong to one side of the body.
 /// Represents the left or right hand side.
@@ -59,6 +59,63 @@ impl IntoEnum<Handedness> for RightHanded {
         Handedness::Right
     }
 }
+
+pub trait HandedTransform<Handed> {
+    fn inward(handedness: Handed);
+    fn outward(handedness: Handed);
+}
+
+impl HandedTransform<Handedness> for Transform{
+    fn inward(handedness: Handedness) -> Vec3{
+        match handedness{
+            Handedness::Left => self.right(),
+            Handedness::Right => self.left(),
+        }
+    }
+    fn outward(handedness: Handedness) -> Vec3{
+        match handedness{
+            Handedness::Left => self.left(),
+            Handedness::Right => self.right(),
+        }
+    }
+}
+
+impl HandedTransform<LeftHanded> for Transform{
+    fn inward(handedness: LeftHanded) -> self.right();
+    fn outward(handedness: LeftHanded) -> self.left();
+}
+
+impl HandedTransform<RightHanded> for Transform{
+    fn inward(handedness: RightHanded) -> self.left();
+    fn outward(handedness: RightHanded) -> self.right();
+}
+
+
+impl HandedTransform<Handedness> for GlobalTransform{
+    fn inward(handedness: Handedness) -> Vec3{
+        match handedness{
+            Handedness::Left => self.right(),
+            Handedness::Right => self.left(),
+        }
+    }
+    fn outward(handedness: Handedness) -> Vec3{
+        match handedness{
+            Handedness::Left => self.left(),
+            Handedness::Right => self.right(),
+        }
+    }
+}
+
+impl HandedTransform<LeftHanded> for GlobalTransform{
+    fn inward(handedness: LeftHanded) -> self.right();
+    fn outward(handedness: LeftHanded) -> self.left();
+}
+
+impl HandedTransform<RightHanded> for GlobalTransform{
+    fn inward(handedness: RightHanded) -> self.left();
+    fn outward(handedness: RightHanded) -> self.right();
+}
+
 
 #[cfg(notes)]
 mod notes {

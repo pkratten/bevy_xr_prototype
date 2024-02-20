@@ -22,8 +22,8 @@ pub struct XrTrackedObjectBundle {
 }
 
 impl XrTrackedObjectBundle {
-    pub fn default(index: u8) -> XrTrackedObjectBundle {
-        XrTrackedObjectBundle {
+    pub fn default(index: u8) -> Self {
+        Self {
             name: Name::new("XrTrackedObject_".to_string() + &index.to_string()),
             spatial_bundle: SpatialBundle::default(),
             xr_local: XrLocal,
