@@ -1,26 +1,37 @@
+use std::borrow::Cow;
+use std::default;
+
+use bevy::core_pipeline::core_3d::graph::{Core3d, Node3d};
+use bevy::core_pipeline::fullscreen_vertex_shader::fullscreen_shader_vertex_state;
+use bevy::ecs::query::QueryItem;
+use bevy::render::camera::ExtractedCamera;
+use bevy::render::render_graph::{RenderGraphApp, ViewNode, ViewNodeRunner};
+use bevy::render::render_resource::binding_types::{sampler, texture_2d};
+use bevy::render::render_resource::{binding_types::uniform_buffer, *};
+use bevy::render::texture::BevyDefault;
+use bevy::render::view::ViewTarget;
 use bevy::{
+    asset::load_internal_asset,
     prelude::*,
     render::{
-        camera::RenderTarget,
+        camera::{ManualTextureViews, NormalizedRenderTarget},
         extract_resource::{ExtractResource, ExtractResourcePlugin},
+        render_asset::RenderAssets,
         render_graph::{self, RenderGraph, RenderLabel},
-        render_resource::{
-            AsBindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId,
-            PipelineCache, ShaderStages,
-        },
+        render_resource::binding_types::texture_storage_2d,
         renderer::{RenderContext, RenderDevice},
-        Render, RenderApp, RenderSet,
+        view::ExtractedWindows,
+        RenderApp,
     },
-    utils::{HashMap, HashSet},
+    utils::HashMap,
 };
 
 pub struct FlipRenderTargetPlugin;
 
-#[derive(Resource, Clone, Deref, ExtractResource)]
-pub struct FlipRenderTargets {
-    render_targets: HashMap<RenderTarget, FlipDirection>,
-}
+#[derive(Default, Resource, Clone, Deref, DerefMut, ExtractResource)]
+pub struct FlipRenderTargets(HashMap<NormalizedRenderTarget, FlipDirection>);
 
+#[derive(Clone)]
 pub enum FlipDirection {
     X,
     Y,
@@ -44,18 +55,25 @@ impl Plugin for FlipRenderTargetPlugin {
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
         app.add_plugins(ExtractResourcePlugin::<FlipRenderTargets>::default());
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_group.in_set(RenderSet::PrepareBindGroups),
-        );
+        app.init_resource::<FlipRenderTargets>();
 
-        let mut render_graph = render_app.world.resource_mut::<RenderGraph>();
-        render_graph.add_node(FlipRenderTargetLabel, FlipRenderTargetNode::default());
-        render_graph.add_node_edge(
-            bevy::render::graph::CameraDriverLabel,
-            FlipRenderTargetLabel,
-        );
+        let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
+            return;
+        };
+
+        render_app
+            .add_render_graph_node::<ViewNodeRunner<FlipRenderTargetNode>>(
+                // Specify the label of the graph, in this case we want the graph for 3d
+                Core3d,
+                // It also needs the label of the node
+                FlipRenderTargetLabel,
+            )
+            .add_render_graph_edges(
+                Core3d,
+                // Specify the node ordering.
+                // This will automatically create all required node edges to enforce the given ordering.
+                (Node3d::Upscaling, FlipRenderTargetLabel),
+            );
     }
 
     fn finish(&self, app: &mut App) {
@@ -66,63 +84,158 @@ impl Plugin for FlipRenderTargetPlugin {
 
 #[derive(Resource)]
 struct FlipRenderTargetPipeline {
-    texture_bind_group_layout: BindGroupLayout,
-    pipeline: CachedComputePipelineId,
-}
-
-#[derive(Resource, Clone, Deref, ExtractResource, AsBindGroup)]
-struct FlipRenderTargetBindGroup {
-    #[storage_texture(0, image_format = Rgba8Unorm, access = ReadWrite)]
-    texture: Handle<Image>,
+    layout: BindGroupLayout,
+    sampler: Sampler,
+    pipeline_id: CachedRenderPipelineId,
 }
 
 impl FromWorld for FlipRenderTargetPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let texture_bind_group_layout = render_device.create_bind_group_layout(
-            "post_process_bind_group_layout",
+        let layout = render_device.create_bind_group_layout(
+            "flip_render_target_bind_group_layout",
             &BindGroupLayoutEntries::sequential(
                 // The layout entries will only be visible in the fragment stage
-                ShaderStages::COMPUTE,
+                ShaderStages::FRAGMENT,
                 (
-                    // The screen texture
+                    // The render target texture
                     texture_2d(TextureSampleType::Float { filterable: true }),
                     // The sampler that will be used to sample the screen texture
                     sampler(SamplerBindingType::Filtering),
                     // The settings uniform that will control the effect
-                    uniform_buffer::<PostProcessSettings>(false),
+                    uniform_buffer::<Vec4>(false),
                 ),
             ),
         );
-        let shader = FLIP_RENDERTARGET_SHADER_HANDLE;
-        let pipeline_cache = world.resource::<PipelineCache>();
-        let pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: None,
-            layout: vec![texture_bind_group_layout.clone()],
-            push_constant_ranges: Vec::new(),
-            shader: shader.clone(),
-            shader_defs: vec![],
-            entry_point: Cow::from("compute"),
+
+        // We can create the sampler here since it won't change at runtime and doesn't depend on the view
+        let sampler = render_device.create_sampler(&SamplerDescriptor {
+            address_mode_u: bevy::render::render_resource::AddressMode::Repeat,
+            address_mode_v: bevy::render::render_resource::AddressMode::Repeat,
+            ..default()
         });
 
-        GameOfLifePipeline {
-            texture_bind_group_layout,
-            pipeline,
+        let shader = FLIP_RENDERTARGET_SHADER_HANDLE;
+        let pipeline_id = world
+            .resource_mut::<PipelineCache>()
+            // This will add the pipeline to the cache and queue it's creation
+            .queue_render_pipeline(RenderPipelineDescriptor {
+                label: Some("post_process_pipeline".into()),
+                layout: vec![layout.clone()],
+                // This will setup a fullscreen triangle for the vertex state
+                vertex: fullscreen_shader_vertex_state(),
+                fragment: Some(FragmentState {
+                    shader,
+                    shader_defs: vec![],
+                    // Make sure this matches the entry point of your shader.
+                    // It can be anything as long as it matches here and in the shader.
+                    entry_point: "fragment".into(),
+                    targets: vec![Some(ColorTargetState {
+                        format: TextureFormat::bevy_default(),
+                        blend: None,
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                // All of the following properties are not important for this effect so just use the default values.
+                // This struct doesn't have the Default trait implemented because not all field can have a default value.
+                primitive: PrimitiveState::default(),
+                depth_stencil: None,
+                multisample: MultisampleState::default(),
+                push_constant_ranges: vec![],
+            });
+
+        FlipRenderTargetPipeline {
+            layout,
+            sampler,
+            pipeline_id,
         }
     }
 }
 
-struct FlipRenderTargetNode;
+#[derive(Default)]
+struct FlipRenderTargetNode {}
 
-impl render_graph::Node for FlipRenderTargetNode {
+impl ViewNode for FlipRenderTargetNode {
+    type ViewQuery = (&'static ViewTarget, &'static ExtractedCamera);
+
     fn run(
         &self,
         _graph: &mut render_graph::RenderGraphContext,
         render_context: &mut RenderContext,
+        (view_target, camera): QueryItem<Self::ViewQuery>,
         world: &World,
     ) -> Result<(), render_graph::NodeRunError> {
+        let render_targets = world.resource::<FlipRenderTargets>();
+        if render_targets.is_empty() {
+            return Ok(());
+        }
+
+        // The pipeline cache is a cache of all previously created pipelines.
+        // It is required to avoid creating a new pipeline each frame,
+        // which is expensive due to shader compilation.
         let pipeline_cache = world.resource::<PipelineCache>();
-        let pipeline = world.resource::<FlipRenderTargetPipeline>();
+
+        // Get the pipeline resource that contains the global data we need
+        // to create the render pipeline
+        let flip_render_target_pipeline = world.resource::<FlipRenderTargetPipeline>();
+
+        // Get the pipeline from the cache
+        let Some(pipeline) =
+            pipeline_cache.get_render_pipeline(flip_render_target_pipeline.pipeline_id)
+        else {
+            return Ok(());
+        };
+
+        let Some((_, flip)) = world
+            .resource::<FlipRenderTargets>()
+            .iter()
+            .find(|(render_target, _)| Some(*render_target) == camera.target.as_ref())
+            .map(|(render_target, flip)| (render_target.to_owned(), flip.to_owned()))
+        else {
+            return Ok(());
+        };
+
+        let flip = match flip {
+            FlipDirection::X => Vec4::new(-1.0, 1.0, 1.0, 1.0),
+            FlipDirection::Y => Vec4::new(1.0, -1.0, 1.0, 1.0),
+            FlipDirection::XY => Vec4::new(-1.0, -1.0, 1.0, 1.0),
+        };
+        let flip = UniformBuffer::from(flip);
+        let Some(flip) = flip.binding() else {
+            return Ok(());
+        };
+
+        let bind_group = render_context.render_device().create_bind_group(
+            "flip_render_target_bind_group",
+            &flip_render_target_pipeline.layout,
+            // It's important for this to match the BindGroupLayout defined in the PostProcessPipeline
+            &BindGroupEntries::sequential((
+                view_target.main_texture_view(),
+                &flip_render_target_pipeline.sampler,
+                flip,
+            )),
+        );
+
+        // Begin the render pass
+        let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
+            label: Some("post_process_pass"),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                // We need to specify the post process destination view here
+                // to make sure we write to the appropriate texture.
+                view: &view_target.out_texture(),
+                resolve_target: None,
+                ops: Operations::default(),
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+        // This is mostly just wgpu boilerplate for drawing a fullscreen triangle,
+        // using the pipeline/bind_group created above
+        render_pass.set_render_pipeline(pipeline);
+        render_pass.set_bind_group(0, &bind_group, &[]);
+        render_pass.draw(0..3, 0..1);
 
         Ok(())
     }
