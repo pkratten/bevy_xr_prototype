@@ -28,12 +28,7 @@ pub fn draw_hand_gizmos(
 
         let radius = radius * scale.length();
 
-        gizmos.circle(
-            translation,
-            Direction3d::new_unchecked(transform.forward()),
-            radius,
-            Color::WHITE,
-        );
+        gizmos.circle(translation, transform.forward(), radius, Color::WHITE);
         gizmos.line(
             translation,
             translation + transform.forward() * radius,
