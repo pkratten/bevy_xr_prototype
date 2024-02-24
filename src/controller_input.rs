@@ -4,6 +4,19 @@ use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 
+pub mod prelude {
+    pub use super::AnalogInput;
+    pub use super::DigitalInput;
+    pub use super::DigitalInputState;
+    pub use super::XrController;
+    pub use super::XrControllerAxis;
+    pub use super::XrControllerAxisType;
+    pub use super::XrControllerInputType;
+    pub use super::XrControllerPress;
+    pub use super::XrControllerTouch;
+    pub use super::XrControllers;
+}
+
 pub use crate::controller::XrController;
 
 pub type AnalogInputSettings = AxisSettings;
