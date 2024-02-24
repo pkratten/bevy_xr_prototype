@@ -114,19 +114,19 @@ impl HandedTransform<Handedness, Vec3> for GlobalTransform {
 }
 
 impl HandedTransform<LeftHanded, Vec3> for GlobalTransform {
-    fn inward(&self, handedness: LeftHanded) -> Vec3 {
+    fn inward(&self, _handedness: LeftHanded) -> Vec3 {
         self.right()
     }
-    fn outward(&self, handedness: LeftHanded) -> Vec3 {
+    fn outward(&self, _handedness: LeftHanded) -> Vec3 {
         self.left()
     }
 }
 
 impl HandedTransform<RightHanded, Vec3> for GlobalTransform {
-    fn inward(&self, handedness: RightHanded) -> Vec3 {
+    fn inward(&self, _handedness: RightHanded) -> Vec3 {
         self.left()
     }
-    fn outward(&self, handedness: RightHanded) -> Vec3 {
+    fn outward(&self, _handedness: RightHanded) -> Vec3 {
         self.right()
     }
 }
