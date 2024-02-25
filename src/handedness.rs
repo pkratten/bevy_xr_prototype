@@ -60,12 +60,30 @@ impl IntoEnum<Handedness> for RightHanded {
     }
 }
 
-pub trait HandedTransform<Handed, Output> {
-    fn inward(&self, handedness: Handed) -> Output;
-    fn outward(&self, handedness: Handed) -> Output;
+pub trait HandedTransform<Handed> {
+    fn inward(&self, handedness: Handed) -> Vec3;
+    fn outward(&self, handedness: Handed) -> Vec3;
 }
 
-impl HandedTransform<Handedness, Vec3> for Transform {
+impl<Handed> HandedTransform<Handed> for Transform
+where
+    Handed: IntoEnum<Handedness>,
+{
+    fn inward(&self, _handedness: Handed) -> Vec3 {
+        match Handed::into_enum() {
+            Handedness::Left => self.right(),
+            Handedness::Right => self.left(),
+        }
+    }
+    fn outward(&self, _handedness: Handed) -> Vec3 {
+        match Handed::into_enum() {
+            Handedness::Left => self.left(),
+            Handedness::Right => self.right(),
+        }
+    }
+}
+
+impl HandedTransform<Handedness> for Transform {
     fn inward(&self, handedness: Handedness) -> Vec3 {
         match handedness {
             Handedness::Left => self.right(),
@@ -80,25 +98,25 @@ impl HandedTransform<Handedness, Vec3> for Transform {
     }
 }
 
-impl HandedTransform<LeftHanded, Vec3> for Transform {
-    fn inward(&self, _handedness: LeftHanded) -> Vec3 {
-        self.right()
+impl<Handed> HandedTransform<Handed> for GlobalTransform
+where
+    Handed: IntoEnum<Handedness>,
+{
+    fn inward(&self, _handedness: Handed) -> Vec3 {
+        match Handed::into_enum() {
+            Handedness::Left => self.right(),
+            Handedness::Right => self.left(),
+        }
     }
-    fn outward(&self, _handedness: LeftHanded) -> Vec3 {
-        self.left()
+    fn outward(&self, _handedness: Handed) -> Vec3 {
+        match Handed::into_enum() {
+            Handedness::Left => self.left(),
+            Handedness::Right => self.right(),
+        }
     }
 }
 
-impl HandedTransform<RightHanded, Vec3> for Transform {
-    fn inward(&self, _handedness: RightHanded) -> Vec3 {
-        self.left()
-    }
-    fn outward(&self, _handedness: RightHanded) -> Vec3 {
-        self.right()
-    }
-}
-
-impl HandedTransform<Handedness, Vec3> for GlobalTransform {
+impl HandedTransform<Handedness> for GlobalTransform {
     fn inward(&self, handedness: Handedness) -> Vec3 {
         match handedness {
             Handedness::Left => self.right(),
@@ -110,24 +128,6 @@ impl HandedTransform<Handedness, Vec3> for GlobalTransform {
             Handedness::Left => self.left(),
             Handedness::Right => self.right(),
         }
-    }
-}
-
-impl HandedTransform<LeftHanded, Vec3> for GlobalTransform {
-    fn inward(&self, _handedness: LeftHanded) -> Vec3 {
-        self.right()
-    }
-    fn outward(&self, _handedness: LeftHanded) -> Vec3 {
-        self.left()
-    }
-}
-
-impl HandedTransform<RightHanded, Vec3> for GlobalTransform {
-    fn inward(&self, _handedness: RightHanded) -> Vec3 {
-        self.left()
-    }
-    fn outward(&self, _handedness: RightHanded) -> Vec3 {
-        self.right()
     }
 }
 
