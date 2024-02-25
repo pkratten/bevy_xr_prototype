@@ -694,12 +694,12 @@ pub fn xr_controller_touch_event_system(
     mut touch_changed_events: EventReader<XrControllerTouchChangedEvent>,
     mut touch_input: ResMut<DigitalInput<XrControllerTouch>>,
     mut touch_input_events: EventWriter<XrControllerTouchInputEvent>,
-    settings: Res<XrControllerSettings>,
+    //settings: Res<XrControllerSettings>,
 ) {
     for touch_event in touch_changed_events.read() {
         let touch = XrControllerTouch::new(touch_event.xr_controller, touch_event.touch_type);
         let value = touch_event.value;
-        let touch_property = settings.get_touch_settings(touch);
+        //let touch_property = settings.get_touch_settings(touch);
 
         //if touch_property.is_released(value) {
         if value > 0.1 {
@@ -762,12 +762,12 @@ pub fn xr_controller_press_event_system(
     mut press_changed_events: EventReader<XrControllerPressChangedEvent>,
     mut press_input: ResMut<DigitalInput<XrControllerPress>>,
     mut press_input_events: EventWriter<XrControllerPressInputEvent>,
-    settings: Res<XrControllerSettings>,
+    //settings: Res<XrControllerSettings>,
 ) {
     for press_event in press_changed_events.read() {
         let press = XrControllerPress::new(press_event.xr_controller, press_event.press_type);
         let value = press_event.value;
-        let press_property = settings.get_press_settings(press);
+        //let press_property = settings.get_press_settings(press);
 
         //if press_property.is_released(value) {
         if value > 0.8 {

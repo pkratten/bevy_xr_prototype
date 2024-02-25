@@ -1,83 +1,64 @@
-use std::borrow::Cow;
-use std::default;
-
 use bevy::core_pipeline::core_3d;
 use bevy::core_pipeline::fullscreen_vertex_shader::fullscreen_shader_vertex_state;
 use bevy::ecs::query::QueryItem;
 use bevy::render::camera::ExtractedCamera;
-use bevy::render::extract_component::ExtractComponent;
-use bevy::render::render_graph::{RenderGraphApp, ViewNode, ViewNodeRunner};
+use bevy::render::render_graph::{self, RenderGraphApp, ViewNode, ViewNodeRunner};
 use bevy::render::render_resource::{
     BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
     BindingType, CachedRenderPipelineId, ColorTargetState, ColorWrites, FragmentState,
     MultisampleState, Operations, PipelineCache, PrimitiveState, RenderPassColorAttachment,
     RenderPassDescriptor, RenderPipelineDescriptor, Sampler, SamplerBindingType, SamplerDescriptor,
-    ShaderStages, ShaderType, TextureFormat, TextureSampleType, TextureViewDimension,
-    UniformBuffer,
+    ShaderStages, TextureFormat, TextureSampleType, TextureViewDimension,
 };
 use bevy::render::texture::BevyDefault;
 use bevy::render::view::ViewTarget;
 use bevy::ui::draw_ui_graph;
+use bevy::utils::HashSet;
 use bevy::{
     asset::load_internal_asset,
     prelude::*,
     render::{
-        camera::{ManualTextureViews, NormalizedRenderTarget},
+        camera::NormalizedRenderTarget,
         extract_resource::{ExtractResource, ExtractResourcePlugin},
-        render_asset::RenderAssets,
-        render_graph::{self, RenderGraph},
         renderer::{RenderContext, RenderDevice},
-        view::ExtractedWindows,
         RenderApp,
     },
-    utils::HashMap,
 };
 
-pub struct FlipRenderTargetPlugin;
+pub struct FlipRenderTargetYPlugin;
 
 #[derive(Default, Resource, Clone, Deref, DerefMut, ExtractResource)]
-pub struct FlipRenderTargets(HashMap<NormalizedRenderTarget, FlipDirection>);
-
-#[derive(Clone)]
-pub enum FlipDirection {
-    X,
-    Y,
-    XY,
-}
-
-impl ExtractComponent for FlipDirection{
-    
-}
+pub struct FlipRenderTargetsY(HashSet<NormalizedRenderTarget>);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)] //RenderLabel)]
 struct FlipRenderTargetLabel;
 
 const FLIP_RENDERTARGET_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9837534426033940724);
 
-impl Plugin for FlipRenderTargetPlugin {
+impl Plugin for FlipRenderTargetYPlugin {
     fn build(&self, app: &mut App) {
         load_internal_asset!(
             app,
             FLIP_RENDERTARGET_SHADER_HANDLE,
-            "flip_render_target.wgsl",
+            "flip_render_target_y.wgsl",
             Shader::from_wgsl
         );
 
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
-        app.add_plugins(ExtractResourcePlugin::<FlipRenderTargets>::default());
-        app.init_resource::<FlipRenderTargets>();
+        app.add_plugins(ExtractResourcePlugin::<FlipRenderTargetsY>::default());
+        app.init_resource::<FlipRenderTargetsY>();
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
 
         render_app
-            .add_render_graph_node::<ViewNodeRunner<FlipRenderTargetNode>>(
+            .add_render_graph_node::<ViewNodeRunner<FlipRenderTargetsYNode>>(
                 // Specify the name of the graph, in this case we want the graph for 3d
                 core_3d::graph::NAME,
                 // It also needs the name of the node
-                "FlipRenderTargets",
+                "FlipRenderTargetsY",
             )
             .add_render_graph_edges(
                 core_3d::graph::NAME,
@@ -85,7 +66,7 @@ impl Plugin for FlipRenderTargetPlugin {
                 // This will automatically create all required node edges to enforce the given ordering.
                 &[
                     draw_ui_graph::node::UI_PASS,
-                    "FlipRenderTargets",
+                    "FlipRenderTargetsY",
                     core_3d::graph::node::UPSCALING,
                 ],
             );
@@ -107,18 +88,18 @@ impl Plugin for FlipRenderTargetPlugin {
 
     fn finish(&self, app: &mut App) {
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<FlipRenderTargetPipeline>();
+        render_app.init_resource::<FlipRenderTargetsYPipeline>();
     }
 }
 
 #[derive(Resource)]
-struct FlipRenderTargetPipeline {
+struct FlipRenderTargetsYPipeline {
     layout: BindGroupLayout,
     sampler: Sampler,
     pipeline_id: CachedRenderPipelineId,
 }
 
-impl FromWorld for FlipRenderTargetPipeline {
+impl FromWorld for FlipRenderTargetsYPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         // let layout = render_device.create_bind_group_layout(
@@ -156,17 +137,6 @@ impl FromWorld for FlipRenderTargetPipeline {
                     binding: 1,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-                // The settings uniform that will control the effect
-                BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: bevy::render::render_resource::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(Vec4::min_size()),
-                    },
                     count: None,
                 },
             ],
@@ -208,7 +178,7 @@ impl FromWorld for FlipRenderTargetPipeline {
                 push_constant_ranges: vec![],
             });
 
-        FlipRenderTargetPipeline {
+        FlipRenderTargetsYPipeline {
             layout,
             sampler,
             pipeline_id,
@@ -216,30 +186,39 @@ impl FromWorld for FlipRenderTargetPipeline {
     }
 }
 
-// This is the component that will get passed to the shader
-#[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
-struct FlipDirectionBuffer {
-    intensity: Vec2,
-    // WebGL2 structs must be 16 byte aligned.
-    #[cfg(feature = "webgl2")]
-    _webgl2_padding: Vec2,
+#[derive(Default)]
+struct FlipRenderTargetsYNode {
+    render_targets: Vec<Entity>,
 }
 
-#[derive(Default)]
-struct FlipRenderTargetNode {}
+impl ViewNode for FlipRenderTargetsYNode {
+    type ViewQuery = (Entity, &'static ViewTarget);
 
-impl ViewNode for FlipRenderTargetNode {
-    type ViewQuery = (&'static ViewTarget, &'static ExtractedCamera);
+    fn update(&mut self, world: &mut World) {
+        let mut view_targets = world.query::<(Entity, &ViewTarget, &ExtractedCamera)>();
+        let render_targets = world.resource::<FlipRenderTargetsY>();
+
+        let entities = render_targets
+            .iter()
+            .filter_map(|render_target| {
+                view_targets
+                    .iter(world)
+                    .find(|(_, _, camera)| camera.target.as_ref() == Some(render_target))
+            })
+            .map(|(entity, _, _)| entity)
+            .collect::<Vec<Entity>>();
+
+        self.render_targets = entities;
+    }
 
     fn run(
         &self,
         _graph: &mut render_graph::RenderGraphContext,
         render_context: &mut RenderContext,
-        (view_target, camera): QueryItem<Self::ViewQuery>,
+        (entity, view_target): QueryItem<Self::ViewQuery>,
         world: &World,
     ) -> Result<(), render_graph::NodeRunError> {
-        let render_targets = world.resource::<FlipRenderTargets>();
-        if render_targets.is_empty() {
+        if !self.render_targets.contains(&entity) {
             return Ok(());
         }
 
@@ -250,7 +229,7 @@ impl ViewNode for FlipRenderTargetNode {
 
         // Get the pipeline resource that contains the global data we need
         // to create the render pipeline
-        let flip_render_target_pipeline = world.resource::<FlipRenderTargetPipeline>();
+        let flip_render_target_pipeline = world.resource::<FlipRenderTargetsYPipeline>();
 
         // Get the pipeline from the cache
         let Some(pipeline) =
@@ -258,25 +237,6 @@ impl ViewNode for FlipRenderTargetNode {
         else {
             return Ok(());
         };
-
-        let Some(flip) = world
-            .resource::<FlipRenderTargets>()
-            .iter()
-            .find(|(render_target, _)| Some(*render_target) == camera.target.as_ref())
-            .map(|(_, flip)| flip.to_owned())
-        else {
-            return Ok(());
-        };
-
-        info!("flipping?");
-
-        let flip = match flip {
-            FlipDirection::X => Vec4::new(-1.0, 1.0, 1.0, 1.0),
-            FlipDirection::Y => Vec4::new(1.0, -1.0, 1.0, 1.0),
-            FlipDirection::XY => Vec4::new(-1.0, -1.0, 1.0, 1.0),
-        };
-        let flip = UniformBuffer::from(flip);
-        flip.write_buffer(device, queue)
 
         let postprocess = view_target.post_process_write();
 
@@ -287,7 +247,6 @@ impl ViewNode for FlipRenderTargetNode {
             &BindGroupEntries::sequential((
                 postprocess.source,
                 &flip_render_target_pipeline.sampler,
-                flip,
             )),
         );
 
@@ -311,9 +270,6 @@ impl ViewNode for FlipRenderTargetNode {
         render_pass.set_render_pipeline(pipeline);
         render_pass.set_bind_group(0, &bind_group, &[]);
         render_pass.draw(0..3, 0..1);
-
-        info!("flipped?");
-
         Ok(())
     }
 }

@@ -27,7 +27,7 @@
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
 
-    let color = textureSample(screen_texture, texture_sampler, in.uv * flip.xy);
+    let color = textureSample(screen_texture, texture_sampler, in.uv * vec2<f32>(1.0, -1.0));
 
     return color;
 }
