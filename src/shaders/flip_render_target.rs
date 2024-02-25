@@ -1,15 +1,23 @@
 use std::borrow::Cow;
 use std::default;
 
-use bevy::core_pipeline::core_3d::graph::{Core3d, Node3d};
+use bevy::core_pipeline::core_3d;
 use bevy::core_pipeline::fullscreen_vertex_shader::fullscreen_shader_vertex_state;
 use bevy::ecs::query::QueryItem;
 use bevy::render::camera::ExtractedCamera;
+use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_graph::{RenderGraphApp, ViewNode, ViewNodeRunner};
-use bevy::render::render_resource::binding_types::{sampler, texture_2d};
-use bevy::render::render_resource::{binding_types::uniform_buffer, *};
+use bevy::render::render_resource::{
+    BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
+    BindingType, CachedRenderPipelineId, ColorTargetState, ColorWrites, FragmentState,
+    MultisampleState, Operations, PipelineCache, PrimitiveState, RenderPassColorAttachment,
+    RenderPassDescriptor, RenderPipelineDescriptor, Sampler, SamplerBindingType, SamplerDescriptor,
+    ShaderStages, ShaderType, TextureFormat, TextureSampleType, TextureViewDimension,
+    UniformBuffer,
+};
 use bevy::render::texture::BevyDefault;
 use bevy::render::view::ViewTarget;
+use bevy::ui::draw_ui_graph;
 use bevy::{
     asset::load_internal_asset,
     prelude::*,
@@ -17,8 +25,7 @@ use bevy::{
         camera::{ManualTextureViews, NormalizedRenderTarget},
         extract_resource::{ExtractResource, ExtractResourcePlugin},
         render_asset::RenderAssets,
-        render_graph::{self, RenderGraph, RenderLabel},
-        render_resource::binding_types::texture_storage_2d,
+        render_graph::{self, RenderGraph},
         renderer::{RenderContext, RenderDevice},
         view::ExtractedWindows,
         RenderApp,
@@ -38,7 +45,11 @@ pub enum FlipDirection {
     XY,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
+impl ExtractComponent for FlipDirection{
+    
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)] //RenderLabel)]
 struct FlipRenderTargetLabel;
 
 const FLIP_RENDERTARGET_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9837534426033940724);
@@ -63,17 +74,35 @@ impl Plugin for FlipRenderTargetPlugin {
 
         render_app
             .add_render_graph_node::<ViewNodeRunner<FlipRenderTargetNode>>(
-                // Specify the label of the graph, in this case we want the graph for 3d
-                Core3d,
-                // It also needs the label of the node
-                FlipRenderTargetLabel,
+                // Specify the name of the graph, in this case we want the graph for 3d
+                core_3d::graph::NAME,
+                // It also needs the name of the node
+                "FlipRenderTargets",
             )
             .add_render_graph_edges(
-                Core3d,
+                core_3d::graph::NAME,
                 // Specify the node ordering.
                 // This will automatically create all required node edges to enforce the given ordering.
-                (Node3d::Upscaling, FlipRenderTargetLabel),
+                &[
+                    draw_ui_graph::node::UI_PASS,
+                    "FlipRenderTargets",
+                    core_3d::graph::node::UPSCALING,
+                ],
             );
+
+        // render_app
+        //     .add_render_graph_node::<ViewNodeRunner<FlipRenderTargetNode>>(
+        //         // Specify the label of the graph, in this case we want the graph for 3d
+        //         Core3d,
+        //         // It also needs the label of the node
+        //         FlipRenderTargetLabel,
+        //     )
+        //     .add_render_graph_edges(
+        //         Core3d,
+        //         // Specify the node ordering.
+        //         // This will automatically create all required node edges to enforce the given ordering.
+        //         (Node3d::Upscaling, FlipRenderTargetLabel),
+        //     );
     }
 
     fn finish(&self, app: &mut App) {
@@ -92,21 +121,56 @@ struct FlipRenderTargetPipeline {
 impl FromWorld for FlipRenderTargetPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let layout = render_device.create_bind_group_layout(
-            "flip_render_target_bind_group_layout",
-            &BindGroupLayoutEntries::sequential(
-                // The layout entries will only be visible in the fragment stage
-                ShaderStages::FRAGMENT,
-                (
-                    // The render target texture
-                    texture_2d(TextureSampleType::Float { filterable: true }),
-                    // The sampler that will be used to sample the screen texture
-                    sampler(SamplerBindingType::Filtering),
-                    // The settings uniform that will control the effect
-                    uniform_buffer::<Vec4>(false),
-                ),
-            ),
-        );
+        // let layout = render_device.create_bind_group_layout(
+        //     "flip_render_target_bind_group_layout",
+        //     &BindGroupLayoutEntries::sequential(
+        //         // The layout entries will only be visible in the fragment stage
+        //         ShaderStages::FRAGMENT,
+        //         (
+        //             // The render target texture
+        //             texture_2d(TextureSampleType::Float { filterable: true }),
+        //             // The sampler that will be used to sample the screen texture
+        //             sampler(SamplerBindingType::Filtering),
+        //             // The settings uniform that will control the effect
+        //             uniform_buffer::<Vec4>(false),
+        //         ),
+        //     ),
+        // );
+
+        let layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("post_process_bind_group_layout"),
+            entries: &[
+                // The screen texture
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        sample_type: TextureSampleType::Float { filterable: true },
+                        view_dimension: TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                // The sampler that will be used to sample the screen texture
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                },
+                // The settings uniform that will control the effect
+                BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: bevy::render::render_resource::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(Vec4::min_size()),
+                    },
+                    count: None,
+                },
+            ],
+        });
 
         // We can create the sampler here since it won't change at runtime and doesn't depend on the view
         let sampler = render_device.create_sampler(&SamplerDescriptor {
@@ -152,6 +216,15 @@ impl FromWorld for FlipRenderTargetPipeline {
     }
 }
 
+// This is the component that will get passed to the shader
+#[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
+struct FlipDirectionBuffer {
+    intensity: Vec2,
+    // WebGL2 structs must be 16 byte aligned.
+    #[cfg(feature = "webgl2")]
+    _webgl2_padding: Vec2,
+}
+
 #[derive(Default)]
 struct FlipRenderTargetNode {}
 
@@ -186,14 +259,16 @@ impl ViewNode for FlipRenderTargetNode {
             return Ok(());
         };
 
-        let Some((_, flip)) = world
+        let Some(flip) = world
             .resource::<FlipRenderTargets>()
             .iter()
             .find(|(render_target, _)| Some(*render_target) == camera.target.as_ref())
-            .map(|(render_target, flip)| (render_target.to_owned(), flip.to_owned()))
+            .map(|(_, flip)| flip.to_owned())
         else {
             return Ok(());
         };
+
+        info!("flipping?");
 
         let flip = match flip {
             FlipDirection::X => Vec4::new(-1.0, 1.0, 1.0, 1.0),
@@ -201,16 +276,16 @@ impl ViewNode for FlipRenderTargetNode {
             FlipDirection::XY => Vec4::new(-1.0, -1.0, 1.0, 1.0),
         };
         let flip = UniformBuffer::from(flip);
-        let Some(flip) = flip.binding() else {
-            return Ok(());
-        };
+        flip.write_buffer(device, queue)
+
+        let postprocess = view_target.post_process_write();
 
         let bind_group = render_context.render_device().create_bind_group(
             "flip_render_target_bind_group",
             &flip_render_target_pipeline.layout,
             // It's important for this to match the BindGroupLayout defined in the PostProcessPipeline
             &BindGroupEntries::sequential((
-                view_target.main_texture_view(),
+                postprocess.source,
                 &flip_render_target_pipeline.sampler,
                 flip,
             )),
@@ -222,13 +297,13 @@ impl ViewNode for FlipRenderTargetNode {
             color_attachments: &[Some(RenderPassColorAttachment {
                 // We need to specify the post process destination view here
                 // to make sure we write to the appropriate texture.
-                view: &view_target.out_texture(),
+                view: &postprocess.destination,
                 resolve_target: None,
                 ops: Operations::default(),
             })],
             depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
+            //timestamp_writes: None,
+            //occlusion_query_set: None,
         });
 
         // This is mostly just wgpu boilerplate for drawing a fullscreen triangle,
@@ -236,6 +311,8 @@ impl ViewNode for FlipRenderTargetNode {
         render_pass.set_render_pipeline(pipeline);
         render_pass.set_bind_group(0, &bind_group, &[]);
         render_pass.draw(0..3, 0..1);
+
+        info!("flipped?");
 
         Ok(())
     }

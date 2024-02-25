@@ -23,7 +23,7 @@ pub type AnalogInputSettings = AxisSettings;
 pub type DigitalAnalogInputSettings = ButtonAxisSettings;
 pub type DigitalInputSettings = ButtonSettings;
 
-pub type DigitalInput<T> = ButtonInput<T>;
+pub type DigitalInput<T> = Input<T>;
 pub type AnalogInput<T> = Axis<T>;
 
 pub struct XrControllerInputPlugin;
@@ -701,7 +701,8 @@ pub fn xr_controller_touch_event_system(
         let value = touch_event.value;
         let touch_property = settings.get_touch_settings(touch);
 
-        if touch_property.is_released(value) {
+        //if touch_property.is_released(value) {
+        if value > 0.1 {
             // Check if button was previously pressed
             if touch_input.pressed(touch) {
                 touch_input_events.send(XrControllerTouchInputEvent {
@@ -712,7 +713,9 @@ pub fn xr_controller_touch_event_system(
             // We don't have to check if the button was previously pressed here
             // because that check is performed within Input<T>::release()
             touch_input.release(touch);
-        } else if touch_property.is_pressed(value) {
+        }
+        //else if touch_property.is_pressed(value) {
+        else if value < 0.1 {
             // Check if button was previously not pressed
             if !touch_input.pressed(touch) {
                 touch_input_events.send(XrControllerTouchInputEvent {
@@ -766,7 +769,8 @@ pub fn xr_controller_press_event_system(
         let value = press_event.value;
         let press_property = settings.get_press_settings(press);
 
-        if press_property.is_released(value) {
+        //if press_property.is_released(value) {
+        if value > 0.8 {
             // Check if button was previously pressed
             if press_input.pressed(press) {
                 press_input_events.send(XrControllerPressInputEvent {
@@ -777,7 +781,9 @@ pub fn xr_controller_press_event_system(
             // We don't have to check if the button was previously pressed here
             // because that check is performed within Input<T>::release()
             press_input.release(press);
-        } else if press_property.is_pressed(value) {
+        }
+        //else if press_property.is_pressed(value) {
+        else if value < 0.8 {
             // Check if button was previously not pressed
             if !press_input.pressed(press) {
                 press_input_events.send(XrControllerPressInputEvent {

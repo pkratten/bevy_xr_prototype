@@ -65,14 +65,14 @@ pub trait HandedTransform<Handed, Output> {
     fn outward(&self, handedness: Handed) -> Output;
 }
 
-impl HandedTransform<Handedness, Direction3d> for Transform {
-    fn inward(&self, handedness: Handedness) -> Direction3d {
+impl HandedTransform<Handedness, Vec3> for Transform {
+    fn inward(&self, handedness: Handedness) -> Vec3 {
         match handedness {
             Handedness::Left => self.right(),
             Handedness::Right => self.left(),
         }
     }
-    fn outward(&self, handedness: Handedness) -> Direction3d {
+    fn outward(&self, handedness: Handedness) -> Vec3 {
         match handedness {
             Handedness::Left => self.left(),
             Handedness::Right => self.right(),
@@ -80,20 +80,20 @@ impl HandedTransform<Handedness, Direction3d> for Transform {
     }
 }
 
-impl HandedTransform<LeftHanded, Direction3d> for Transform {
-    fn inward(&self, _handedness: LeftHanded) -> Direction3d {
+impl HandedTransform<LeftHanded, Vec3> for Transform {
+    fn inward(&self, _handedness: LeftHanded) -> Vec3 {
         self.right()
     }
-    fn outward(&self, _handedness: LeftHanded) -> Direction3d {
+    fn outward(&self, _handedness: LeftHanded) -> Vec3 {
         self.left()
     }
 }
 
-impl HandedTransform<RightHanded, Direction3d> for Transform {
-    fn inward(&self, _handedness: RightHanded) -> Direction3d {
+impl HandedTransform<RightHanded, Vec3> for Transform {
+    fn inward(&self, _handedness: RightHanded) -> Vec3 {
         self.left()
     }
-    fn outward(&self, _handedness: RightHanded) -> Direction3d {
+    fn outward(&self, _handedness: RightHanded) -> Vec3 {
         self.right()
     }
 }
