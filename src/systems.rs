@@ -1,6 +1,7 @@
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 
 use crate::{
+    controller::XrController,
     handedness::HandednessMarker,
     hands::{
         finger::*,
@@ -29,6 +30,31 @@ pub fn draw_hand_gizmos(
         let radius = radius * scale.length();
 
         gizmos.circle(translation, transform.forward(), radius, Color::WHITE);
+        gizmos.line(
+            translation,
+            translation + transform.forward() * radius,
+            Color::BLUE,
+        );
+        gizmos.line(
+            translation,
+            translation + transform.right() * radius,
+            Color::RED,
+        );
+        gizmos.line(
+            translation,
+            translation + transform.up() * radius,
+            Color::GREEN,
+        );
+    }
+}
+
+pub fn draw_controller_gizmos(
+    controller: Query<&GlobalTransform, With<XrController>>,
+    mut gizmos: Gizmos,
+) {
+    for transform in controller.iter() {
+        let (scale, _, translation) = transform.to_scale_rotation_translation();
+        let radius = 7.0 * scale.length();
         gizmos.line(
             translation,
             translation + transform.forward() * radius,
