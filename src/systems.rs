@@ -54,7 +54,7 @@ pub fn draw_controller_gizmos(
 ) {
     for transform in controller.iter() {
         let (scale, _, translation) = transform.to_scale_rotation_translation();
-        let radius = 7.0 * scale.length();
+        let radius = 0.05 * scale.length();
         gizmos.line(
             translation,
             translation + transform.forward() * radius,

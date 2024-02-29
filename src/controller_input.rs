@@ -702,7 +702,7 @@ pub fn xr_controller_touch_event_system(
         //let touch_property = settings.get_touch_settings(touch);
 
         //if touch_property.is_released(value) {
-        if value > 0.1 {
+        if value < 0.1 {
             // Check if button was previously pressed
             if touch_input.pressed(touch) {
                 touch_input_events.send(XrControllerTouchInputEvent {
@@ -715,7 +715,7 @@ pub fn xr_controller_touch_event_system(
             touch_input.release(touch);
         }
         //else if touch_property.is_pressed(value) {
-        else if value < 0.1 {
+        else if value > 0.1 {
             // Check if button was previously not pressed
             if !touch_input.pressed(touch) {
                 touch_input_events.send(XrControllerTouchInputEvent {
@@ -770,7 +770,7 @@ pub fn xr_controller_press_event_system(
         //let press_property = settings.get_press_settings(press);
 
         //if press_property.is_released(value) {
-        if value > 0.8 {
+        if value < 0.8 {
             // Check if button was previously pressed
             if press_input.pressed(press) {
                 press_input_events.send(XrControllerPressInputEvent {
@@ -783,7 +783,7 @@ pub fn xr_controller_press_event_system(
             press_input.release(press);
         }
         //else if press_property.is_pressed(value) {
-        else if value < 0.8 {
+        else if value > 0.8 {
             // Check if button was previously not pressed
             if !press_input.pressed(press) {
                 press_input_events.send(XrControllerPressInputEvent {
