@@ -1,4 +1,4 @@
-mod post_process_flip_y;
+mod flip_view;
 
-pub use post_process_flip_y::PostProcessFlipY;
-pub use post_process_flip_y::PostProcessFlipYPlugin;
+pub use flip_view::FlipView;
+pub use flip_view::FlipViewPlugin;
