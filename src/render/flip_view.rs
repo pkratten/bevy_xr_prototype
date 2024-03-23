@@ -32,7 +32,7 @@ use bevy::{
 
 pub struct FlipViewPlugin;
 
-#[derive(Component, Default, Clone, Copy, ExtractComponent)]
+#[derive(Component, Clone, Copy, ExtractComponent, PartialEq, Eq)]
 pub enum FlipView {
     X,
     Y,
@@ -43,12 +43,7 @@ const FLIP_VIEW_HANDLE: Handle<Shader> = Handle::weak_from_u128(9837534426033940
 
 impl Plugin for FlipViewPlugin {
     fn build(&self, app: &mut App) {
-        load_internal_asset!(
-            app,
-            FLIP_VIEW_HANDLE,
-            "flip_view.wgsl",
-            Shader::from_wgsl
-        );
+        load_internal_asset!(app, FLIP_VIEW_HANDLE, "flip_view.wgsl", Shader::from_wgsl);
 
         app.add_plugins((ExtractComponentPlugin::<FlipView>::default(),));
 
@@ -76,8 +71,7 @@ impl Plugin for FlipViewPlugin {
             return;
         };
 
-        render_app
-            .init_resource::<FlipViewPipeline>();
+        render_app.init_resource::<FlipViewPipeline>();
     }
 }
 
@@ -102,30 +96,28 @@ impl ViewNode for FlipViewNode {
         let pipeline_cache = world.resource::<PipelineCache>();
 
         // Get the pipeline from the cache
-        let Some(pipeline_x) = pipeline_cache.get_render_pipeline(post_process_pipeline.pipeline_id_x)
+        let Some(pipeline_x) =
+            pipeline_cache.get_render_pipeline(post_process_pipeline.pipeline_id_x)
         else {
             return Ok(());
         };
 
-        let Some(pipeline_y) = pipeline_cache.get_render_pipeline(post_process_pipeline.pipeline_id_y)
+        let Some(pipeline_y) =
+            pipeline_cache.get_render_pipeline(post_process_pipeline.pipeline_id_y)
         else {
             return Ok(());
         };
-        
+
         let post_process = view_target.post_process_write();
 
         let bind_group = render_context.render_device().create_bind_group(
-            "post_process_bind_group",
+            "post_process_flip_view_bind_group",
             &post_process_pipeline.layout,
-            &BindGroupEntries::sequential((
-                post_process.source,
-                &post_process_pipeline.sampler,
-            )),
+            &BindGroupEntries::sequential((post_process.source, &post_process_pipeline.sampler)),
         );
 
-        
         let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
-            label: Some("post_process_pass"),
+            label: Some("post_process_flip_view_pass"),
             color_attachments: &[Some(RenderPassColorAttachment {
                 view: post_process.destination,
                 resolve_target: None,
@@ -134,17 +126,16 @@ impl ViewNode for FlipViewNode {
             depth_stencil_attachment: None,
         });
 
-        
         render_pass.set_bind_group(0, &bind_group, &[]);
 
-        if flip_view == FlipView::X | flip_view == FlipView::XY{
+        if *flip_view == FlipView::X || *flip_view == FlipView::XY {
             render_pass.set_render_pipeline(pipeline_x);
-        render_pass.draw(0..3, 0..1);
+            render_pass.draw(0..3, 0..1);
         }
 
-        if flip_view == FlipView::Y | flip_view == FlipView::XY{
+        if *flip_view == FlipView::Y || *flip_view == FlipView::XY {
             render_pass.set_render_pipeline(pipeline_y);
-        render_pass.draw(0..3, 0..1);
+            render_pass.draw(0..3, 0..1);
         }
 
         Ok(())
@@ -195,49 +186,51 @@ impl FromWorld for FlipViewPipeline {
 
         let shader = FLIP_VIEW_HANDLE;
 
-        let pipeline_id_x = world
-            .resource_mut::<PipelineCache>()
-            .queue_render_pipeline(RenderPipelineDescriptor {
-                label: Some("post_process_flip_view_x_pipeline".into()),
-                layout: vec![layout.clone()],
-                vertex: fullscreen_shader_vertex_state(),
-                fragment: Some(FragmentState {
-                    shader,
-                    shader_defs: vec![],
-                    entry_point: "x".into(),
-                    targets: vec![Some(ColorTargetState {
-                        format: TextureFormat::bevy_default(),
-                        blend: None,
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                primitive: PrimitiveState::default(),
-                depth_stencil: None,
-                multisample: MultisampleState::default(),
-                push_constant_ranges: vec![],
-            });
+        let pipeline_id_x =
+            world
+                .resource_mut::<PipelineCache>()
+                .queue_render_pipeline(RenderPipelineDescriptor {
+                    label: Some("post_process_flip_view_x_pipeline".into()),
+                    layout: vec![layout.clone()],
+                    vertex: fullscreen_shader_vertex_state(),
+                    fragment: Some(FragmentState {
+                        shader: shader.clone(),
+                        shader_defs: vec![],
+                        entry_point: "x".into(),
+                        targets: vec![Some(ColorTargetState {
+                            format: TextureFormat::bevy_default(),
+                            blend: None,
+                            write_mask: ColorWrites::ALL,
+                        })],
+                    }),
+                    primitive: PrimitiveState::default(),
+                    depth_stencil: None,
+                    multisample: MultisampleState::default(),
+                    push_constant_ranges: vec![],
+                });
 
-        let pipeline_id_y = world
-            .resource_mut::<PipelineCache>()
-            .queue_render_pipeline(RenderPipelineDescriptor {
-                label: Some("post_process_flip_view_y_pipeline".into()),
-                layout: vec![layout.clone()],
-                vertex: fullscreen_shader_vertex_state(),
-                fragment: Some(FragmentState {
-                    shader,
-                    shader_defs: vec![],
-                    entry_point: "y".into(),
-                    targets: vec![Some(ColorTargetState {
-                        format: TextureFormat::bevy_default(),
-                        blend: None,
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                primitive: PrimitiveState::default(),
-                depth_stencil: None,
-                multisample: MultisampleState::default(),
-                push_constant_ranges: vec![],
-            });
+        let pipeline_id_y =
+            world
+                .resource_mut::<PipelineCache>()
+                .queue_render_pipeline(RenderPipelineDescriptor {
+                    label: Some("post_process_flip_view_y_pipeline".into()),
+                    layout: vec![layout.clone()],
+                    vertex: fullscreen_shader_vertex_state(),
+                    fragment: Some(FragmentState {
+                        shader,
+                        shader_defs: vec![],
+                        entry_point: "y".into(),
+                        targets: vec![Some(ColorTargetState {
+                            format: TextureFormat::bevy_default(),
+                            blend: None,
+                            write_mask: ColorWrites::ALL,
+                        })],
+                    }),
+                    primitive: PrimitiveState::default(),
+                    depth_stencil: None,
+                    multisample: MultisampleState::default(),
+                    push_constant_ranges: vec![],
+                });
 
         Self {
             layout,
