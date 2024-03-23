@@ -1,4 +1,4 @@
-use bevy::{ecs::query::QuerySingleError, prelude::*};
+use bevy::{ecs::query::QuerySingleError, math::Direction3d, prelude::*};
 
 use crate::{
     controller::XrController,
@@ -29,21 +29,26 @@ pub fn draw_hand_gizmos(
 
         let radius = radius * scale.length();
 
-        gizmos.circle(translation, transform.forward(), radius, Color::WHITE);
+        gizmos.circle(
+            translation,
+            Dir3::new_unchecked(transform.forward()),
+            radius,
+            Color::WHITE,
+        );
         gizmos.line(
             translation,
             translation + transform.forward() * radius,
-            Color::BLUE,
+            LinearRgba::BLUE,
         );
         gizmos.line(
             translation,
             translation + transform.right() * radius,
-            Color::RED,
+            LinearRgba::RED,
         );
         gizmos.line(
             translation,
             translation + transform.up() * radius,
-            Color::GREEN,
+            LinearRgba::GREEN,
         );
     }
 }
@@ -58,17 +63,17 @@ pub fn draw_controller_gizmos(
         gizmos.line(
             translation,
             translation + transform.forward() * radius,
-            Color::BLUE,
+            LinearRgba::BLUE,
         );
         gizmos.line(
             translation,
             translation + transform.right() * radius,
-            Color::RED,
+            LinearRgba::RED,
         );
         gizmos.line(
             translation,
             translation + transform.up() * radius,
-            Color::GREEN,
+            LinearRgba::GREEN,
         );
     }
 }

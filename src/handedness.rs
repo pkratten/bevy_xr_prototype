@@ -61,21 +61,21 @@ impl IntoEnum<Handedness> for RightHanded {
 }
 
 pub trait HandedTransform<Handed> {
-    fn inward(&self, handedness: Handed) -> Vec3;
-    fn outward(&self, handedness: Handed) -> Vec3;
+    fn inward(&self, handedness: Handed) -> Dir3;
+    fn outward(&self, handedness: Handed) -> Dir3;
 }
 
 impl<Handed> HandedTransform<Handed> for Transform
 where
     Handed: IntoEnum<Handedness>,
 {
-    fn inward(&self, _handedness: Handed) -> Vec3 {
+    fn inward(&self, _handedness: Handed) -> Dir3 {
         match Handed::into_enum() {
             Handedness::Left => self.right(),
             Handedness::Right => self.left(),
         }
     }
-    fn outward(&self, _handedness: Handed) -> Vec3 {
+    fn outward(&self, _handedness: Handed) -> Dir3 {
         match Handed::into_enum() {
             Handedness::Left => self.left(),
             Handedness::Right => self.right(),
@@ -84,13 +84,13 @@ where
 }
 
 impl HandedTransform<Handedness> for Transform {
-    fn inward(&self, handedness: Handedness) -> Vec3 {
+    fn inward(&self, handedness: Handedness) -> Dir3 {
         match handedness {
             Handedness::Left => self.right(),
             Handedness::Right => self.left(),
         }
     }
-    fn outward(&self, handedness: Handedness) -> Vec3 {
+    fn outward(&self, handedness: Handedness) -> Dir3 {
         match handedness {
             Handedness::Left => self.left(),
             Handedness::Right => self.right(),
@@ -102,31 +102,31 @@ impl<Handed> HandedTransform<Handed> for GlobalTransform
 where
     Handed: IntoEnum<Handedness>,
 {
-    fn inward(&self, _handedness: Handed) -> Vec3 {
+    fn inward(&self, _handedness: Handed) -> Dir3 {
         match Handed::into_enum() {
-            Handedness::Left => self.right(),
-            Handedness::Right => self.left(),
+            Handedness::Left => Dir3::new_unchecked(self.right()),
+            Handedness::Right => Dir3::new_unchecked(self.left()),
         }
     }
-    fn outward(&self, _handedness: Handed) -> Vec3 {
+    fn outward(&self, _handedness: Handed) -> Dir3 {
         match Handed::into_enum() {
-            Handedness::Left => self.left(),
-            Handedness::Right => self.right(),
+            Handedness::Left => Dir3::new_unchecked(self.left()),
+            Handedness::Right => Dir3::new_unchecked(self.right()),
         }
     }
 }
 
 impl HandedTransform<Handedness> for GlobalTransform {
-    fn inward(&self, handedness: Handedness) -> Vec3 {
+    fn inward(&self, handedness: Handedness) -> Dir3 {
         match handedness {
-            Handedness::Left => self.right(),
-            Handedness::Right => self.left(),
+            Handedness::Left => Dir3::new_unchecked(self.right()),
+            Handedness::Right => Dir3::new_unchecked(self.left()),
         }
     }
-    fn outward(&self, handedness: Handedness) -> Vec3 {
+    fn outward(&self, handedness: Handedness) -> Dir3 {
         match handedness {
-            Handedness::Left => self.left(),
-            Handedness::Right => self.right(),
+            Handedness::Left => Dir3::new_unchecked(self.left()),
+            Handedness::Right => Dir3::new_unchecked(self.right()),
         }
     }
 }

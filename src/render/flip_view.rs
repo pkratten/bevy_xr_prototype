@@ -7,21 +7,27 @@
 
 use bevy::{
     asset::load_internal_asset,
-    core_pipeline::{core_3d, fullscreen_vertex_shader::fullscreen_shader_vertex_state},
+    core_pipeline::{
+        core_3d::{
+            self,
+            graph::{Core3d, Node3d},
+        },
+        fullscreen_vertex_shader::fullscreen_shader_vertex_state,
+    },
     ecs::query::QueryItem,
     prelude::*,
     render::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_graph::{
-            NodeRunError, RenderGraphApp, RenderGraphContext, ViewNode, ViewNodeRunner,
+            NodeRunError, RenderGraphApp, RenderGraphContext, RenderLabel, ViewNode, ViewNodeRunner,
         },
         render_resource::{
-            BindGroupEntries, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
-            BindingType, CachedRenderPipelineId, ColorTargetState, ColorWrites, FragmentState,
-            MultisampleState, Operations, PipelineCache, PrimitiveState, RenderPassColorAttachment,
-            RenderPassDescriptor, RenderPipelineDescriptor, Sampler, SamplerBindingType,
-            SamplerDescriptor, ShaderStages, TextureFormat, TextureSampleType,
-            TextureViewDimension,
+            binding_types::{sampler, texture_2d},
+            BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, CachedRenderPipelineId,
+            ColorTargetState, ColorWrites, FragmentState, MultisampleState, Operations,
+            PipelineCache, PrimitiveState, RenderPassColorAttachment, RenderPassDescriptor,
+            RenderPipelineDescriptor, Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages,
+            TextureFormat, TextureSampleType,
         },
         renderer::{RenderContext, RenderDevice},
         texture::BevyDefault,
@@ -52,17 +58,14 @@ impl Plugin for FlipViewPlugin {
         };
 
         render_app
-            .add_render_graph_node::<ViewNodeRunner<FlipViewNode>>(
-                core_3d::graph::NAME,
-                FlipViewNode::NAME,
-            )
+            .add_render_graph_node::<ViewNodeRunner<FlipViewNode>>(Core3d, FlipViewLabel)
             .add_render_graph_edges(
-                core_3d::graph::NAME,
-                &[
-                    core_3d::graph::node::TONEMAPPING,
-                    FlipViewNode::NAME,
-                    core_3d::graph::node::END_MAIN_PASS_POST_PROCESSING,
-                ],
+                Core3d,
+                (
+                    Node3d::Tonemapping,
+                    FlipViewLabel,
+                    Node3d::EndMainPassPostProcessing,
+                ),
             );
     }
 
@@ -77,9 +80,9 @@ impl Plugin for FlipViewPlugin {
 
 #[derive(Default)]
 struct FlipViewNode;
-impl FlipViewNode {
-    pub const NAME: &'static str = "post_process_flip_view";
-}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
+struct FlipViewLabel;
 
 impl ViewNode for FlipViewNode {
     type ViewQuery = (&'static ViewTarget, &'static FlipView);
@@ -123,7 +126,7 @@ impl ViewNode for FlipViewNode {
                 resolve_target: None,
                 ops: Operations::default(),
             })],
-            depth_stencil_attachment: None,
+            ..default()
         });
 
         render_pass.set_bind_group(0, &bind_group, &[]);
@@ -155,28 +158,19 @@ impl FromWorld for FlipViewPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("post_process_flip_view_bind_group_layout"),
-            entries: &[
-                // The screen texture
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        sample_type: TextureSampleType::Float { filterable: true },
-                        view_dimension: TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
+        let layout = render_device.create_bind_group_layout(
+            "post_process_flip_view_bind_group_layout",
+            &BindGroupLayoutEntries::sequential(
+                // The layout entries will only be visible in the fragment stage
+                ShaderStages::FRAGMENT,
+                (
+                    // The screen texture
+                    texture_2d(TextureSampleType::Float { filterable: true }),
+                    // The sampler that will be used to sample the screen texture
+                    sampler(SamplerBindingType::Filtering),
+                ),
+            ),
+        );
 
         let sampler = render_device.create_sampler(&SamplerDescriptor {
             address_mode_u: bevy::render::render_resource::AddressMode::Repeat,

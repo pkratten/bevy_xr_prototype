@@ -23,7 +23,7 @@ pub type AnalogInputSettings = AxisSettings;
 pub type DigitalAnalogInputSettings = ButtonAxisSettings;
 pub type DigitalInputSettings = ButtonSettings;
 
-pub type DigitalInput<T> = Input<T>;
+pub type DigitalInput<T> = ButtonInput<T>;
 pub type AnalogInput<T> = Axis<T>;
 
 pub struct XrControllerInputPlugin;
